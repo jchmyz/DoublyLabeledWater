@@ -1,35 +1,24 @@
 import numpy as np
-from pylab import *
+import datetime
 from datetime import timedelta
 
 D_VSMOW_RATIO = 0.00015576
 O18_VSMOW_RATIO = 0.0020052
-STANDARD_WATER_MOL_MASS = 18.10106/1000  #kg
-
-
-def isotope_turnover_2pt(background, initratio, finalratio, elapsedhours):
-    """Calculate an isotope turnover rate in 1/hr using the 2pt method
-       :param background:  enrichment of the background urine measurement as a ratio
-       :param initratio: enrichment of the initial urine measurement as a ratio
-       :param finalratio: enrichment of the final urine measurement as a ratio
-       :param elapsedhours: elapsed time in hours between the intial and final urine measurements
-       :return: istope turnover rate in 1/hr
-    """
-    return ((np.log(initratio - background) - np.log(finalratio - background)) / elapsedhours)
+STANDARD_WATER_MOL_MASS = 18.10106 / 1000  # kg
 
 
 class DLWsubject:
     """Class for performing Doubly Labeled Water calculations
        Attributes:
-           ddeltas (np.array): deuterium delta values of subject samples
-           o19deltas (np.array): oxygen 18 delta values of subject samples
-           sampledatetimes ([datetime]): dates and times of sample collections
-           doseweights ([float]): weights in g of doses administered, deuterium first, 18O second
-           molmasses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
-           doseenrichments ([float]): dose enrichments in ppm of doses administered, deuterium first, 18O second
-           weights ([float]): initial and final weights of the subject in kg
-           dratios (np.array): deuterium ratios of subject samples
-           o18ratios (np.array): 18O ratios of subject samples
+           d_deltas (np.array): deuterium delta values of subject samples
+           o_18deltas (np.array): oxygen 18 delta values of subject samples
+           sample_datetimes ([datetime]): dates and times of sample collections
+           dose_weights ([float]): weights in g of doses administered, deuterium first, 18O second
+           mol_masses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
+           dose_enrichments ([float]): dose enrichments in ppm of doses administered, deuterium first, 18O second
+           subject_weights ([float]): initial and final weights of the subject in kg
+           d_ratios (np.array): deuterium ratios of subject samples
+           o18_ratios (np.array): 18O ratios of subject samples
            kd (float): deuterium turnover rate in 1/hr
            ko (float): oxygen turnover rate in 1/hr
            nd_plat_4hr (float): deuterium dilution space calculated by the plateau method using the 4hr sample in mol
@@ -61,160 +50,114 @@ class DLWsubject:
                               values calculated via Schoeller and the weight adjusted, average, plateau dilution spaces
     """
 
-    def __init__(self, ddeltas, o18deltas, sampledatetimes, doseweights, molmasses, doseenrichments, weights):
+    def __init__(self, d_deltas, o_18deltas, sample_datetimes, dose_weights, mol_masses, dose_enrichments,
+                 subject_weights):
         """Constructor for the DLWsubject class
-           :param ddeltas (np.array): deuterium delta values of subject samples
-           :param o19deltas (np.array): oxygen 18 delta values of subject samples
-           :param sampledatetimes ([datetime]): dates and times of sample collections
-           :param doseweights ([float]): weights in g of doses administered, deuterium first, 18O second
-           :param molmasses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
-           :param doseenrichments ([float]): dose enrichments in ppm of doses administered, deuterium first, 18O second
-           :param weights ([float]): initial and final weights of the subject in kg
+           :param d_deltas (np.array): deuterium delta values of subject samples
+           :param o_18deltas (np.array): oxygen 18 delta values of subject samples
+           :param sample_datetimes ([datetime]): dates and times of sample collections
+           :param dose_weights ([float]): weights in g of doses administered, deuterium first, 18O second
+           :param mol_masses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
+           :param dose_enrichments ([float]): dose enrichments in ppm of doses administered, deuterium first, 18O second
+           :param subject_weights ([float]): initial and final weights of the subject in kg
         """
-        if len(ddeltas) == len(o18deltas) == len(sampledatetimes) == 5:
-            self._ddeltas = ddeltas
-            self._o18deltas = o18deltas
-            self._sampledatetimes = sampledatetimes
-            self._doseweights = doseweights
-            self._molmasses = molmasses
-            self._doseenrichments = doseenrichments
-            self._weights = weights
+        if len(d_deltas) == len(o_18deltas) == len(sample_datetimes) == 5:
+            self.d_deltas = d_deltas
+            self.o18_deltas = o_18deltas
+            self.sample_datetimes = sample_datetimes
+            self.dose_weights = dose_weights
+            self.mol_masses = mol_masses
+            self.dose_enrichments = dose_enrichments
+            self.subject_weights = subject_weights
 
-            self._dratios = self.ddeltas_to_ratios()
-            self._o18ratios = self.o18deltas_to_ratios()
+            self.d_ratios = self.ddeltas_to_ratios()
+            self.o18_ratios = self.o18deltas_to_ratios()
 
-            self._kd = self.average_turnover_2pt(self._dratios, self._sampledatetimes)
-            self._ko = self.average_turnover_2pt(self._o18ratios, self._sampledatetimes)
+            self.kd = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
+            self.ko = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
 
-            self._nd_plat_4hr = self.dilution_space_plateau(self._doseweights[0], self._molmasses[0],
-                                                            self._doseenrichments[0], self._dratios[1],
-                                                            self._dratios[0])
-            self._no_plat_4hr = self.dilution_space_plateau(self._doseweights[1], self._molmasses[1],
-                                                            self._doseenrichments[1], self._o18ratios[1],
-                                                            self._o18ratios[0])
+            self.nd_plat_4hr = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
+                                                           self.dose_enrichments[0], self.d_ratios[1],
+                                                           self.d_ratios[0])
+            self.no_plat_4hr = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
+                                                           self.dose_enrichments[1], self.o18_ratios[1],
+                                                           self.o18_ratios[0])
 
-            self._nd_plat_avg = self.dilution_space_plateau(self._doseweights[0], self._molmasses[0],
-                                                            self._doseenrichments[0],
-                                                            (self._dratios[1] + self._dratios[2]) / 2,
-                                                            self._dratios[0])
-            self._no_plat_avg = self.dilution_space_plateau(self._doseweights[1], self._molmasses[1],
-                                                            self._doseenrichments[1],
-                                                            (self._o18ratios[1] + self._o18ratios[2]) / 2,
-                                                            self._o18ratios[0])
+            self.nd_plat_avg = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
+                                                           self.dose_enrichments[0],
+                                                           (self.d_ratios[1] + self.d_ratios[2]) / 2,
+                                                           self.d_ratios[0])
+            self.no_plat_avg = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
+                                                           self.dose_enrichments[1],
+                                                           (self.o18_ratios[1] + self.o18_ratios[2]) / 2,
+                                                           self.o18_ratios[0])
 
-            self._nd_int_avg = self.avg_intercept_dilution_space(self._doseweights[0], self._molmasses[0],
-                                                                 self._doseenrichments[0], self._kd, self._dratios,
-                                                                 self._sampledatetimes)
-            self._no_int_avg = self.avg_intercept_dilution_space(self._doseweights[1], self._molmasses[1],
-                                                                 self._doseenrichments[1], self._ko, self._o18ratios,
-                                                                 self._sampledatetimes)
+            self.nd_int_avg = self.avg_intercept_dilution_space(self.dose_weights[0], self.mol_masses[0],
+                                                                self.dose_enrichments[0], self.kd, self.d_ratios,
+                                                                self.sample_datetimes)
+            self.no_int_avg = self.avg_intercept_dilution_space(self.dose_weights[1], self.mol_masses[1],
+                                                                self.dose_enrichments[1], self.ko, self.o18_ratios,
+                                                                self.sample_datetimes)
 
-            self._dil_space_ratio = self._nd_plat_4hr / self._no_plat_4hr
+            self.dil_space_ratio = self.nd_plat_4hr / self.no_plat_4hr
 
-            self._adj_nd_int_avg = self.adj_dilution_space(self._nd_int_avg, self._weights)
-            self._adj_no_int_avg = self.adj_dilution_space(self._no_int_avg, self._weights)
+            self.adj_nd_int_avg = self.adj_dilution_space(self.nd_int_avg, self.subject_weights)
+            self.adj_no_int_avg = self.adj_dilution_space(self.no_int_avg, self.subject_weights)
 
-            self._adj_nd_plat_avg = self.adj_dilution_space(self._nd_plat_avg, self._weights)
-            self._adj_no_plat_avg = self.adj_dilution_space(self._no_plat_avg, self._weights)
+            self.adj_nd_plat_avg = self.adj_dilution_space(self.nd_plat_avg, self.subject_weights)
+            self.adj_no_plat_avg = self.adj_dilution_space(self.no_plat_avg, self.subject_weights)
 
-            self._schoeller_co2_int = self.calc_schoeller_co2(self._adj_nd_int_avg, self._adj_no_int_avg,
-                                                              self._kd, self._ko)
-            self._schoeller_co2_plat = self.calc_schoeller_co2(self._adj_nd_plat_avg, self._adj_no_plat_avg,
-                                                               self._kd, self._ko)
+            self.schoeller_co2_int = self.calc_schoeller_co2(self.adj_nd_int_avg, self.adj_no_int_avg,
+                                                              self.kd, self.ko)
+            self.schoeller_co2_plat = self.calc_schoeller_co2(self.adj_nd_plat_avg, self.adj_no_plat_avg,
+                                                               self.kd, self.ko)
 
-            self._schoeller_tee_int = self.co2_to_tee(self.schoeller_co2_int)
-            self._schoeller_tee_plat = self.co2_to_tee(self.schoeller_co2_plat)
+            self.schoeller_tee_int = self.co2_to_tee(self.schoeller_co2_int)
+            self.schoeller_tee_plat = self.co2_to_tee(self.schoeller_co2_plat)
 
         else:
             raise ValueError("Arrays not correct size")
 
-    @property
-    def ddeltas(self):
-        return self._ddeltas
-
-    @property
-    def o18deltas(self):
-        return self._o18deltas
-
-    @property
-    def sampledate(self):
-        return self._sampledatetimes
-
-    @property
-    def doseweights(self):
-        return self._doseweights
-
-    @property
-    def molmasses(self):
-        return self._molmasses
-
-    @property
-    def doseenrichments(self):
-        return self._doseenrichments
-
-    @property
-    def dratios(self):
-        return self._dratios
-
-    @property
-    def o18ratios(self):
-        return self._o18ratios
-
     def ddeltas_to_ratios(self):
         """Convert deuterium delta values to ratios.
            :return: deuterium ratios"""
-        return ((self.ddeltas / 1000) + 1) * D_VSMOW_RATIO
+        return ((self.d_deltas / 1000) + 1) * D_VSMOW_RATIO
 
     def o18deltas_to_ratios(self):
         """Convert 18O delta values to ratios.
            :return: 18O ratios"""
-        return ((self.o18deltas / 1000) + 1) * O18_VSMOW_RATIO
-
-    @property
-    def kd(self):
-        return self._kd
-
-    @property
-    def ko(self):
-        return self._ko
+        return ((self.o18_deltas / 1000) + 1) * O18_VSMOW_RATIO
 
     @staticmethod
-    def average_turnover_2pt(ratios, sampledatetime):
+    def isotope_turnover_2pt(background, initratio, finalratio, elapsedhours):
+        """Calculate an isotope turnover rate in 1/hr using the 2pt method
+           :param background:  enrichment of the background urine measurement as a ratio
+           :param initratio: enrichment of the initial urine measurement as a ratio
+           :param finalratio: enrichment of the final urine measurement as a ratio
+           :param elapsedhours: elapsed time in hours between the intial and final urine measurements
+           :return: istope turnover rate in 1/hr
+        """
+        return ((np.log(initratio - background) - np.log(finalratio - background)) / elapsedhours)
+
+    def average_turnover_2pt(self, ratios, sampledatetime):
         """Calculate the average isotope turnover rate in 1/hr using the 2pt method
            :param ratios: measured urine isotope ratios
-           :param sampledatetime: time and date of urine collections
-           :return: average isotope turnover rate in 1/hr
-        """
+           :param sampledatetime (datetime): time and date of urine collections
+           :return: average isotope turnover rate in 1/hr"""
         turnovers = np.zeros(4)
 
         elapsedhours = (timedelta.total_seconds(sampledatetime[3] - sampledatetime[1])) / 3600
-        turnovers[0] = isotope_turnover_2pt(ratios[0], ratios[1], ratios[3], elapsedhours)
+        turnovers[0] = self.isotope_turnover_2pt(ratios[0], ratios[1], ratios[3], elapsedhours)
 
         elapsedhours = (timedelta.total_seconds(sampledatetime[4] - sampledatetime[1])) / 3600
-        turnovers[1] = isotope_turnover_2pt(ratios[0], ratios[1], ratios[4], elapsedhours)
+        turnovers[1] = self.isotope_turnover_2pt(ratios[0], ratios[1], ratios[4], elapsedhours)
 
         elapsedhours = (timedelta.total_seconds(sampledatetime[3] - sampledatetime[2])) / 3600
-        turnovers[2] = isotope_turnover_2pt(ratios[0], ratios[2], ratios[3], elapsedhours)
+        turnovers[2] = self.isotope_turnover_2pt(ratios[0], ratios[2], ratios[3], elapsedhours)
 
         elapsedhours = (timedelta.total_seconds(sampledatetime[4] - sampledatetime[2])) / 3600
-        turnovers[3] = isotope_turnover_2pt(ratios[0], ratios[2], ratios[4], elapsedhours)
+        turnovers[3] = self.isotope_turnover_2pt(ratios[0], ratios[2], ratios[4], elapsedhours)
         return np.mean(turnovers)
-
-    @property
-    def nd_plat_4hr(self):
-        return self._nd_plat_4hr
-
-    @property
-    def no_plat_4hr(self):
-        return self._no_plat_4hr
-
-    @property
-    def nd_plat_avg(self):
-        return self._nd_plat_avg
-
-    @property
-    def no_plat_avg(self):
-        return self._no_plat_avg
 
     @staticmethod
     def dilution_space_plateau(doseweight, molmass, doseenrichment, plateauenrichment, background):
@@ -228,14 +171,6 @@ class DLWsubject:
         """
 
         return doseweight / molmass * (doseenrichment - plateauenrichment) / (plateauenrichment - background)
-
-    @property
-    def nd_int_avg(self):
-        return self._nd_int_avg
-
-    @property
-    def no_int_avg(self):
-        return self._no_int_avg
 
     @staticmethod
     def dilution_space_intercept(doseweight, molmass, doseenrichment, plateauenrichment, background,
@@ -277,47 +212,19 @@ class DLWsubject:
                                                     turnoverrate, dosetime[1])
         return np.mean(dilspace)
 
-    @property
-    def dil_space_ratio(self):
-        return self._dil_space_ratio
-
-    @property
-    def adj_nd_int_avg(self):
-        return self._adj_nd_int_avg
-
-    @property
-    def adj_no_int_avg(self):
-        return self._adj_no_int_avg
-
-    @property
-    def adj_nd_plat_avg(self):
-        return self._adj_nd_plat_avg
-
-    @property
-    def adj_no_plat_avg(self):
-        return self._adj_no_plat_avg
-
     @staticmethod
-    def adj_dilution_space(dilution_space, weights):
-        """Adjust the given dilution space by the beginning and end weights to produce an average dilution space.
+    def adj_dilution_space(dilution_space, subject_weights):
+        """Adjust the given dilution space by the beginning and end subject weights to produce an average dilution space.
            :param dilution_space: unadjusted dilution space
-           :param weights: array containing before and after subject weights
+           :param subject_weights: array containing before and after subject weights
            :return adj_dilution_space: dilution space in mol adjusted for the subject weight change over the
                                        sampling period
         """
         begin_dilution_spacekg = dilution_space * STANDARD_WATER_MOL_MASS
-        end_dilution_spacekg = weights[1] / weights[0] * begin_dilution_spacekg
+        end_dilution_spacekg = subject_weights[1] / subject_weights[0] * begin_dilution_spacekg
 
         adj_dilution_space = ((begin_dilution_spacekg + end_dilution_spacekg) / 2) / STANDARD_WATER_MOL_MASS
         return adj_dilution_space
-
-    @property
-    def schoeller_co2_int(self):
-        return self._schoeller_co2_int
-
-    @property
-    def schoeller_co2_plat(self):
-        return self._schoeller_co2_plat
 
     @staticmethod
     def calc_schoeller_co2(nd, no, kd, ko):
@@ -330,17 +237,9 @@ class DLWsubject:
            :return co2prod: co2 production rate in mol/hr
         """
         n = ((no / 1.01) + (nd / 1.04)) / 2
-        co2prod = (n / 2.078) * (1.01 * ko - 1.04 * kd) - 0.0246 * n * 1.05 * (1.01 * ko - 1.04 * kd)
+        co2_prod = (n / 2.078) * (1.01 * ko - 1.04 * kd) - 0.0246 * n * 1.05 * (1.01 * ko - 1.04 * kd)
         # reduces to co2prod = n*(0.459952*ko - 0.47362*kd)
-        return co2prod
-
-    @property
-    def schoeller_tee_int(self):
-        return self._schoeller_tee_int
-
-    @property
-    def schoeller_tee_plat(self):
-        return self._schoeller_tee_plat
+        return co2_prod
 
     @staticmethod
     def co2_to_tee(co2):
