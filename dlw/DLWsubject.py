@@ -6,6 +6,12 @@ D_VSMOW_RATIO = 0.00015576
 O18_VSMOW_RATIO = 0.0020052
 STANDARD_WATER_MOL_MASS = 18.10106 / 1000  # kg
 
+D_PLATEAU_LIMIT = 5.0
+O18_PLATEAU_LIMIT = 5.0
+DIL_SPACE_RATIO_LOW_LIMIT = 1.00
+DIL_SPACE_RATIO_HIGH_LIMIT = 1.07
+KO_KD_RATIO_LOW_LIMIT = 1.1
+KO_KD_RATIO_HIGH_LIMIT = 1.7
 
 class DLWsubject:
     """Class for performing Doubly Labeled Water calculations
@@ -21,6 +27,7 @@ class DLWsubject:
            o18_ratios (np.array): 18O ratios of subject samples
            kd (float): deuterium turnover rate in 1/hr
            ko (float): oxygen turnover rate in 1/hr
+           ko_kd_ratio (float): ratio of oxygen and deuterium turnover rates
            nd_plat_4hr (float): deuterium dilution space calculated by the plateau method using the 4hr sample in mol
            no_plat_4hr (float): 18O dilution space calculated by the plateau method using the 4hr sample in mol
            nd_plat_avg (float): deuterium dilution space calculated by the plateau method using the average of the 4hr
@@ -45,9 +52,11 @@ class DLWsubject:
            schoeller_co2_plat (float): CO2 production rate in mol/hr using the equation of Schoeller (equation A6, 1986
                               as updated in 1988) using the weight adjusted, average, plateu dilution spaces
            schoeller_tee_int (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
-                              values calculated via Schoeller and the weight adjusted, average, intercept dilution spaces
+                            values calculated via Schoeller and the weight adjusted, average, intercept dilution spaces
            schoeller_tee_plat (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
                               values calculated via Schoeller and the weight adjusted, average, plateau dilution spaces
+           d_delta_percent (float): Percent difference between the 4hr and 5hr delta measurements of deuterium
+           o18_delta_percent (float): Percent difference between the 4hr and 5hr delta measurements of 18O
     """
 
     def __init__(self, d_deltas, o_18deltas, sample_datetimes, dose_weights, mol_masses, dose_enrichments,
@@ -70,11 +79,12 @@ class DLWsubject:
             self.dose_enrichments = dose_enrichments
             self.subject_weights = subject_weights
 
-            self.d_ratios = self.ddeltas_to_ratios()
-            self.o18_ratios = self.o18deltas_to_ratios()
+            self.d_ratios = self.d_deltas_to_ratios()
+            self.o18_ratios = self.o18_deltas_to_ratios()
 
             self.kd = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
             self.ko = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
+            self.ko_kd_ratio = self.ko/self.kd
 
             self.nd_plat_4hr = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
                                                            self.dose_enrichments[0], self.d_ratios[1],
@@ -108,22 +118,25 @@ class DLWsubject:
             self.adj_no_plat_avg = self.adj_dilution_space(self.no_plat_avg, self.subject_weights)
 
             self.schoeller_co2_int = self.calc_schoeller_co2(self.adj_nd_int_avg, self.adj_no_int_avg,
-                                                              self.kd, self.ko)
+                                                             self.kd, self.ko)
             self.schoeller_co2_plat = self.calc_schoeller_co2(self.adj_nd_plat_avg, self.adj_no_plat_avg,
-                                                               self.kd, self.ko)
+                                                              self.kd, self.ko)
 
             self.schoeller_tee_int = self.co2_to_tee(self.schoeller_co2_int)
             self.schoeller_tee_plat = self.co2_to_tee(self.schoeller_co2_plat)
 
+            self.d_delta_percent = self.delta_percent(self.d_deltas[1], self.d_deltas[2])
+            self.o18_delta_percent = self.delta_percent(self.o18_deltas[1], self.o18_deltas[2])
+
         else:
             raise ValueError("Arrays not correct size")
 
-    def ddeltas_to_ratios(self):
+    def d_deltas_to_ratios(self):
         """Convert deuterium delta values to ratios.
            :return: deuterium ratios"""
         return ((self.d_deltas / 1000) + 1) * D_VSMOW_RATIO
 
-    def o18deltas_to_ratios(self):
+    def o18_deltas_to_ratios(self):
         """Convert 18O delta values to ratios.
            :return: 18O ratios"""
         return ((self.o18_deltas / 1000) + 1) * O18_VSMOW_RATIO
@@ -137,12 +150,12 @@ class DLWsubject:
            :param elapsedhours: elapsed time in hours between the intial and final urine measurements
            :return: istope turnover rate in 1/hr
         """
-        return ((np.log(initratio - background) - np.log(finalratio - background)) / elapsedhours)
+        return (np.log(initratio - background) - np.log(finalratio - background)) / elapsedhours
 
     def average_turnover_2pt(self, ratios, sampledatetime):
         """Calculate the average isotope turnover rate in 1/hr using the 2pt method
            :param ratios: measured urine isotope ratios
-           :param sampledatetime (datetime): time and date of urine collections
+           :param sampledatetime: time and date of urine collections
            :return: average isotope turnover rate in 1/hr"""
         turnovers = np.zeros(4)
 
@@ -248,3 +261,8 @@ class DLWsubject:
            :return: total energy expenditure in kcal/day
         """
         return co2 * 22.414 * 24 * 5.7425
+
+    @staticmethod
+    def delta_percent(first, second):
+        """Calculate the percent difference between two delta values """
+        return(abs(first - second)/second*100)
