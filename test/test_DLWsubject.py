@@ -1,6 +1,7 @@
 from unittest import TestCase
 import numpy as np
-import dlw.DLWsubject
+import datetime
+import dlw
 
 D_DELTAS_TEST = np.array([-62.281,742.928,739.377,243.613,242.038])
 O18_DELTAS_TEST = np.array([-5.423, 106.001, 105.521, 29.599,29.633])

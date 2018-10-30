@@ -1,5 +1,6 @@
 import os
 from flask import Flask
+from dlw.DLWsubject import DLWsubject
 
 
 def create_app(input_config=None):
