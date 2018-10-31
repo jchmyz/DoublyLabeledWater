@@ -13,6 +13,7 @@ DIL_SPACE_RATIO_HIGH_LIMIT = 1.07
 KO_KD_RATIO_LOW_LIMIT = 1.1
 KO_KD_RATIO_HIGH_LIMIT = 1.7
 
+
 class DLWsubject:
     """Class for performing Doubly Labeled Water calculations
        Attributes:
@@ -71,6 +72,7 @@ class DLWsubject:
            :param subject_weights ([float]): initial and final weights of the subject in kg
         """
         if len(d_deltas) == len(o_18deltas) == len(sample_datetimes) == 5:
+            # how to test that dates are in order?
             self.d_deltas = d_deltas
             self.o18_deltas = o_18deltas
             self.sample_datetimes = sample_datetimes
@@ -84,7 +86,7 @@ class DLWsubject:
 
             self.kd = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
             self.ko = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
-            self.ko_kd_ratio = self.ko/self.kd
+            self.ko_kd_ratio = self.ko / self.kd
 
             self.nd_plat_4hr = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
                                                            self.dose_enrichments[0], self.d_ratios[1],
@@ -129,7 +131,7 @@ class DLWsubject:
             self.o18_delta_percent = self.delta_percent(self.o18_deltas[1], self.o18_deltas[2])
 
         else:
-            raise ValueError("Arrays not correct size")
+            raise ValueError('Arrays not correct size')
 
     def d_deltas_to_ratios(self):
         """Convert deuterium delta values to ratios.
@@ -150,7 +152,10 @@ class DLWsubject:
            :param elapsedhours: elapsed time in hours between the intial and final urine measurements
            :return: istope turnover rate in 1/hr
         """
-        return (np.log(initratio - background) - np.log(finalratio - background)) / elapsedhours
+        if (background < initratio and background < finalratio and finalratio < initratio):
+            return (np.log(initratio - background) - np.log(finalratio - background)) / elapsedhours
+        else:
+            raise ValueError('Isotope ratios do not conform to pattern background < final < plateau')
 
     def average_turnover_2pt(self, ratios, sampledatetime):
         """Calculate the average isotope turnover rate in 1/hr using the 2pt method
@@ -265,4 +270,4 @@ class DLWsubject:
     @staticmethod
     def delta_percent(first, second):
         """Calculate the percent difference between two delta values """
-        return(abs(first - second)/second*100)
+        return (abs(first - second) / second * 100)
