@@ -33,9 +33,13 @@ class TestDLWsubject(TestCase):
                            MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
             self.assertTrue('Arrays not correct size' in context.exception)
 
-    def test_incorrect_dates(self):
-        test_subject = dlw.DLWsubject(D_DELTAS_TEST, O18_DELTAS_TEST, INCORRECT_DATES_TEST, DOSE_WEIGHTS_TEST,
+    def test_DLWsubject_inline_calcs(self):
+        test_subject = dlw.DLWsubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+        self.assertAlmostEqual(1.19261881061, test_subject.ko_kd_ratio)
+        self.assertAlmostEqual(27.1433333518, test_subject.adj_nd_plat_avg_kg)
+        self.assertAlmostEqual(26.4237877954, test_subject.adj_no_plat_avg_kg)
+        self.assertAlmostEqual(1.0271786087, test_subject.dil_space_ratio)
 
     def test_d_deltas_to_ratios(self):
         test_subject = dlw.DLWsubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
@@ -84,7 +88,12 @@ class TestDLWsubject(TestCase):
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
         self.assertAlmostEqual(1925.89140638, test_subject.schoeller_tee_plat)
 
-    def test_delta_percent(self):
+    def test_percent_difference(self):
         test_subject = dlw.DLWsubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
         self.assertAlmostEqual(0.4802691996, test_subject.d_delta_percent)
+
+    def test_ee_consistency_check(self):
+        test_subject = dlw.DLWsubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+        self.assertAlmostEqual(0.435966268, test_subject.ee_check)

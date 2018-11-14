@@ -119,6 +119,9 @@ class DLWsubject:
             self.adj_nd_plat_avg = self.adj_dilution_space(self.nd_plat_avg, self.subject_weights)
             self.adj_no_plat_avg = self.adj_dilution_space(self.no_plat_avg, self.subject_weights)
 
+            self.adj_nd_plat_avg_kg = self.adj_nd_plat_avg * STANDARD_WATER_MOL_MASS
+            self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS
+
             self.schoeller_co2_int = self.calc_schoeller_co2(self.adj_nd_int_avg, self.adj_no_int_avg,
                                                              self.kd, self.ko)
             self.schoeller_co2_plat = self.calc_schoeller_co2(self.adj_nd_plat_avg, self.adj_no_plat_avg,
@@ -127,8 +130,9 @@ class DLWsubject:
             self.schoeller_tee_int = self.co2_to_tee(self.schoeller_co2_int)
             self.schoeller_tee_plat = self.co2_to_tee(self.schoeller_co2_plat)
 
-            self.d_delta_percent = self.delta_percent(self.d_deltas[1], self.d_deltas[2])
-            self.o18_delta_percent = self.delta_percent(self.o18_deltas[1], self.o18_deltas[2])
+            self.d_delta_percent = self.percent_difference(self.d_deltas[1], self.d_deltas[2])
+            self.o18_delta_percent = self.percent_difference(self.o18_deltas[1], self.o18_deltas[2])
+            self.ee_check = self.ee_consistency_check()
 
         else:
             raise ValueError('Arrays not correct size')
@@ -268,6 +272,34 @@ class DLWsubject:
         return co2 * 22.414 * 24 * 5.7425
 
     @staticmethod
-    def delta_percent(first, second):
-        """Calculate the percent difference between two delta values """
+    def percent_difference(first, second):
+        """Calculate the percent difference between two values """
         return (abs(first - second) / second * 100)
+
+    def ee_consistency_check(self):
+        """Calculate the percentage difference between the energy expenditure measured using the PD4/ED4 pair and
+            the PD5/ED5 pair
+            :return: percentage differences"""
+        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[3] - self.sample_datetimes[1])) / 3600
+        kd_4hr = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[1], self.d_ratios[3], elapsedhours)
+        ko_4hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[1], self.o18_ratios[3], elapsedhours)
+
+        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[4] - self.sample_datetimes[2])) / 3600
+        kd_5hr = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
+        ko_5hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
+
+        nd_plat_5hr = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
+                                                  self.dose_enrichments[0], self.d_ratios[2],
+                                                  self.d_ratios[0])
+        no_plat_5hr = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
+                                                       self.dose_enrichments[1], self.o18_ratios[2],
+                                                       self.o18_ratios[0])
+
+        schoeller_4hr = self.calc_schoeller_co2(self.nd_plat_4hr, self.no_plat_4hr, kd_4hr, ko_4hr)
+        schoeller_5hr = self.calc_schoeller_co2(nd_plat_5hr, no_plat_5hr, kd_5hr, ko_5hr)
+
+        tee_4hr = self.co2_to_tee(schoeller_4hr)
+        tee_5hr = self.co2_to_tee(schoeller_5hr)
+
+        diff = self.percent_difference(tee_4hr, tee_5hr)
+        return diff
