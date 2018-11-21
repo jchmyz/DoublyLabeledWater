@@ -40,6 +40,15 @@ class TestDLWsubject(TestCase):
         self.assertAlmostEqual(27.1433333518, test_subject.adj_nd_plat_avg_kg)
         self.assertAlmostEqual(26.4237877954, test_subject.adj_no_plat_avg_kg)
         self.assertAlmostEqual(1.0271786087, test_subject.dil_space_ratio)
+        self.assertAlmostEqual(26.07428756, test_subject.total_body_water_d_kg)
+        self.assertAlmostEqual(26.24010705, test_subject.total_body_water_o_kg)
+        self.assertAlmostEqual(26.157197304, test_subject.total_body_water_ave_kg)
+        self.assertAlmostEqual(35.8317771287, test_subject.fat_free_mass)
+        self.assertAlmostEqual(13.328222871, test_subject.fat_mass)
+        self.assertAlmostEqual(27.111926101, test_subject.body_fat_percent)
+        self.assertAlmostEqual(14.543278471, test_subject.schoeller_co2_int_mol_day)
+        self.assertAlmostEqual(13.582210152, test_subject.schoeller_co2_int_L_day)
+        self.assertAlmostEqual(7.832030450, test_subject.schoeller_tee_int_mj_day)
 
     def test_d_deltas_to_ratios(self):
         test_subject = dlw.DLWsubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,

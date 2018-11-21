@@ -5,6 +5,13 @@ from datetime import timedelta
 D_VSMOW_RATIO = 0.00015576
 O18_VSMOW_RATIO = 0.0020052
 STANDARD_WATER_MOL_MASS = 18.10106 / 1000  # kg
+POP_DIL_SPACE_D = 1.041
+POP_DIL_SPACE_O = 1.007
+FAT_FREE_MASS_FACTOR = 0.73
+HOURS_PER_DAY = 24
+LITERS_PER_MOL   = 22.414
+WEIR_CONSTANT = 5.7425
+MJ_PER_KCAL = 4.184 / 1000
 
 D_PLATEAU_LIMIT = 5.0
 O18_PLATEAU_LIMIT = 5.0
@@ -122,13 +129,26 @@ class DLWsubject:
             self.adj_nd_plat_avg_kg = self.adj_nd_plat_avg * STANDARD_WATER_MOL_MASS
             self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS
 
+            self.total_body_water_d_kg = self.adj_nd_plat_avg_kg / POP_DIL_SPACE_D
+            self.total_body_water_o_kg = self.adj_no_plat_avg_kg / POP_DIL_SPACE_O
+            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg)/2
+
+            self.fat_free_mass = self.total_body_water_ave_kg/FAT_FREE_MASS_FACTOR
+            self.fat_mass = self.subject_weights[0] - self.fat_free_mass
+            self.body_fat_percent = self.fat_mass / self.subject_weights[0] * 100
+
             self.schoeller_co2_int = self.calc_schoeller_co2(self.adj_nd_int_avg, self.adj_no_int_avg,
                                                              self.kd, self.ko)
             self.schoeller_co2_plat = self.calc_schoeller_co2(self.adj_nd_plat_avg, self.adj_no_plat_avg,
                                                               self.kd, self.ko)
 
+            self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY
+            self.schoeller_co2_int_L_day = self.schoeller_co2_int * LITERS_PER_MOL
+
             self.schoeller_tee_int = self.co2_to_tee(self.schoeller_co2_int)
             self.schoeller_tee_plat = self.co2_to_tee(self.schoeller_co2_plat)
+
+            self.schoeller_tee_int_mj_day = self.schoeller_tee_int * MJ_PER_KCAL
 
             self.d_delta_percent = self.percent_difference(self.d_deltas[1], self.d_deltas[2])
             self.o18_delta_percent = self.percent_difference(self.o18_deltas[1], self.o18_deltas[2])
@@ -265,11 +285,11 @@ class DLWsubject:
 
     @staticmethod
     def co2_to_tee(co2):
-        """Convert CO2 production to total energy expenditure using the equation of Weir, J.B. J Physiol., 109(1-2):1-9, 1949
+        """Convert CO2 production to total energy expenditure in using the equation of Weir, J.B. J Physiol., 109(1-2):1-9, 1949
            :param co2: volume of co2 production in mol/hr
            :return: total energy expenditure in kcal/day
         """
-        return co2 * 22.414 * 24 * 5.7425
+        return co2 * LITERS_PER_MOL * HOURS_PER_DAY * WEIR_CONSTANT
 
     @staticmethod
     def percent_difference(first, second):
