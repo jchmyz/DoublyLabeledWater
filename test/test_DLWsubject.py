@@ -100,9 +100,9 @@ class TestDLWsubject(TestCase):
     def test_percent_difference(self):
         test_subject = dlw.DLWsubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(0.4802691996, test_subject.d_delta_percent)
+        self.assertAlmostEqual(0.2041535561, test_subject.d_ratio_percent)
 
     def test_ee_consistency_check(self):
         test_subject = dlw.DLWsubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(0.435966268, test_subject.ee_check)
+        self.assertAlmostEqual(0.5475, test_subject.ee_check)

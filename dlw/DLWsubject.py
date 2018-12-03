@@ -63,8 +63,8 @@ class DLWsubject:
                             values calculated via Schoeller and the weight adjusted, average, intercept dilution spaces
            schoeller_tee_plat (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
                               values calculated via Schoeller and the weight adjusted, average, plateau dilution spaces
-           d_delta_percent (float): Percent difference between the 4hr and 5hr delta measurements of deuterium
-           o18_delta_percent (float): Percent difference between the 4hr and 5hr delta measurements of 18O
+           d_ratio_percent (float): Percent difference between the 4hr and 5hr delta measurements of deuterium
+           o18_ratio_percent (float): Percent difference between the 4hr and 5hr delta measurements of 18O
     """
 
     def __init__(self, d_deltas, o_18deltas, sample_datetimes, dose_weights, mol_masses, dose_enrichments,
@@ -150,8 +150,8 @@ class DLWsubject:
 
             self.schoeller_tee_int_mj_day = self.schoeller_tee_int * MJ_PER_KCAL
 
-            self.d_delta_percent = self.percent_difference(self.d_deltas[1], self.d_deltas[2])
-            self.o18_delta_percent = self.percent_difference(self.o18_deltas[1], self.o18_deltas[2])
+            self.d_ratio_percent = self.percent_difference(self.d_ratios[1], self.d_ratios[2])
+            self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1], self.o18_ratios[2])
             self.ee_check = self.ee_consistency_check()
 
         else:
