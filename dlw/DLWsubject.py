@@ -9,7 +9,7 @@ POP_DIL_SPACE_D = 1.041
 POP_DIL_SPACE_O = 1.007
 FAT_FREE_MASS_FACTOR = 0.73
 HOURS_PER_DAY = 24
-LITERS_PER_MOL   = 22.414
+LITERS_PER_MOL = 22.414
 WEIR_CONSTANT = 5.7425
 MJ_PER_KCAL = 4.184 / 1000
 
@@ -48,23 +48,45 @@ class DLWsubject:
                         hr samples in mol
            dil_space_ratio (float): ratio of the 4 hr plateau deuterium and 18O dilution spaces
            adj_nd_int_avg (float): deuterium average intercept dilution space adjusted for the subject weight change
-                           over the sampling period
+                           over the sampling period, in mol
            adj_no_int_avg (float): 18O average intercept dilution space adjusted for the subject weight change over the
-                           sampling period
+                           sampling period, in mol
            adj_nd_plat_avg (float): deuterium average plateu dilution space adjusted for the subject weight change over
-                           the sampling period
-           adj_no_plat_avg (float): 18O average plateu dilution space adjusted for the subject weight change over the
-                           sampling period
+                           the sampling period, in mol
+           adj_no_plat_avg (float): 18O average plateau dilution space adjusted for the subject weight change over the
+                           sampling period, in mol
+           adj_nd_plat_avg_kg (float): deuterium average plateu dilution space adjusted for the subject weight change
+                           over the sampling period, in kg
+           adj_no_plat_avg_kg (float): 18O average plateau dilution space adjusted for the subject weight change over
+                           the sampling period, in kg
+           total_body_water_d_kg (float): total body water calculated from the average D plateau dilution space, in kg
+           total_body_water_o_kg (float): total body water calculated from the average 18O plateau dilution space, in kg
+           total_body_water_ave_kg (float): average of total_body_water_d_kg and total_body_water_o_kg, in kg
+           fat_free_mass (float): fat free mass of the subject, in kg
+           fat_mass (float): fat mass of the subject, in kg
+           body_fat_percent (float): body fat percent of the subject, in percent
            schoeller_co2_int (float): CO2 production rate in mol/hr using the equation of Schoeller (equation A6, 1986
                               as updated in 1988) using the weight adjusted, average, intercept dilution spaces
            schoeller_co2_plat (float): CO2 production rate in mol/hr using the equation of Schoeller (equation A6, 1986
                               as updated in 1988) using the weight adjusted, average, plateu dilution spaces
+           schoeller_co2_int_mol_day (float): CO2 production rate in mol/day using the equation of Schoeller (equation
+                            A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
+           schoeller_co2_int_L_day (float): CO2 production rate in L/day using the equation of Schoeller (equation
+                            A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
            schoeller_tee_int (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
-                            values calculated via Schoeller and the weight adjusted, average, intercept dilution spaces
+                            values calculated via Schoeller and the weight adjusted, average, intercept dilution spaces,
+                            in kcal/day
            schoeller_tee_plat (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
-                              values calculated via Schoeller and the weight adjusted, average, plateau dilution spaces
+                              values calculated via Schoeller and the weight adjusted, average, plateau dilution spaces,
+                              in kcal/day
+           schoeller_tee_int_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                            co2 values calculated via Schoeller and the weight adjusted, average, intercept dilution
+                            spaces, in mj/day
            d_ratio_percent (float): Percent difference between the 4hr and 5hr delta measurements of deuterium
            o18_ratio_percent (float): Percent difference between the 4hr and 5hr delta measurements of 18O
+           ee_check (float): Data quality check consisting of the percent difference between the TEE (in kcal/day)
+                            calculated using the PD4/ED4 pair and the TEE calculated using the PD5/ED5 pair, both with
+                            the plateau method.
     """
 
     def __init__(self, d_deltas, o_18deltas, sample_datetimes, dose_weights, mol_masses, dose_enrichments,
@@ -309,11 +331,9 @@ class DLWsubject:
         ko_5hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
 
         nd_plat_5hr = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
-                                                  self.dose_enrichments[0], self.d_ratios[2],
-                                                  self.d_ratios[0])
+                                                  self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
         no_plat_5hr = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
-                                                       self.dose_enrichments[1], self.o18_ratios[2],
-                                                       self.o18_ratios[0])
+                                                  self.dose_enrichments[1], self.o18_ratios[2], self.o18_ratios[0])
 
         schoeller_4hr = self.calc_schoeller_co2(self.nd_plat_4hr, self.no_plat_4hr, kd_4hr, ko_4hr)
         schoeller_5hr = self.calc_schoeller_co2(nd_plat_5hr, no_plat_5hr, kd_5hr, ko_5hr)
