@@ -49,6 +49,7 @@ class TestDLWsubject(TestCase):
         self.assertAlmostEqual(14.543278471, test_subject.schoeller_co2_int_mol_day)
         self.assertAlmostEqual(13.582210152, test_subject.schoeller_co2_int_L_day)
         self.assertAlmostEqual(7.832030450, test_subject.schoeller_tee_int_mj_day)
+        self.assertAlmostEqual(8.057929644, test_subject.schoeller_tee_plat_mj_day)
 
     def test_d_deltas_to_ratios(self):
         test_subject = dlw.DLWsubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,

@@ -82,6 +82,9 @@ class DLWsubject:
            schoeller_tee_int_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
                             co2 values calculated via Schoeller and the weight adjusted, average, intercept dilution
                             spaces, in mj/day
+           schoeller_tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                            co2 values calculated via Schoeller and the weight adjusted, average, plateau dilution
+                            spaces, in mj/day
            d_ratio_percent (float): Percent difference between the 4hr and 5hr delta measurements of deuterium
            o18_ratio_percent (float): Percent difference between the 4hr and 5hr delta measurements of 18O
            ee_check (float): Data quality check consisting of the percent difference between the TEE (in kcal/day)
@@ -151,6 +154,7 @@ class DLWsubject:
             self.adj_nd_plat_avg_kg = self.adj_nd_plat_avg * STANDARD_WATER_MOL_MASS
             self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS
 
+           # self.rh2o = (self.adj_nd_plat_avg_kg * self.kd * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
             self.total_body_water_d_kg = self.adj_nd_plat_avg_kg / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.adj_no_plat_avg_kg / POP_DIL_SPACE_O
             self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg)/2
@@ -171,6 +175,7 @@ class DLWsubject:
             self.schoeller_tee_plat = self.co2_to_tee(self.schoeller_co2_plat)
 
             self.schoeller_tee_int_mj_day = self.schoeller_tee_int * MJ_PER_KCAL
+            self.schoeller_tee_plat_mj_day = self.schoeller_tee_plat * MJ_PER_KCAL
 
             self.d_ratio_percent = self.percent_difference(self.d_ratios[1], self.d_ratios[2])
             self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1], self.o18_ratios[2])
@@ -343,3 +348,9 @@ class DLWsubject:
 
         diff = self.percent_difference(tee_4hr, tee_5hr)
         return diff
+
+    def save_results_csv(self, filename):
+        write_header = 'rCO2_mol/day, rCO2_L/day, EE_kcal/day, EE_MJ/day'
+        write_data = np.array([self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int,
+                               self.schoeller_tee_int_mj_day])
+        np.savetxt(filename, write_data, delimiter = ',', header=write_header)
