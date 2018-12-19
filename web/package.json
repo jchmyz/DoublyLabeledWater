@@ -1,0 +1,45 @@
+{
+  "name": "dlw",
+  "version": "1.0.0",
+  "description": "Web tool to generate results in doubly labeled water studies",
+  "main": "index.js",
+  "scripts": {},
+  "browser": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jchmyz/DoublyLabeledWater"
+  },
+  "author": "julia@chmyz.com",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/jchmyz/DoublyLabeledWater",
+  "dependencies": {
+    "@blueprintjs/core": "^3.5.1",
+    "@blueprintjs/datetime": "^3.4.0",
+    "react": "^16.4.2",
+    "react-datetime": "^2.16.3"
+  },
+  "devDependencies": {
+    "coffeescript": "latest",
+    "css-loader": "^0.23.1",
+    "file-loader": "^0.8.5",
+    "gulp": "^3.9.1",
+    "gulp-coffee": "^2.3.2",
+    "gulp-compile-handlebars": "^0.6.1",
+    "gulp-debug": "^2.1.2",
+    "gulp-handlebars": "^4.0.0",
+    "gulp-newer": "^1.1.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-sass": "^2.3.1",
+    "gulp-shell": "^0.5.2",
+    "gulp-sourcemaps": "^2.0.0-alpha",
+    "gulp-typescript": "^3.2.2",
+    "gulp-util": "^3.0.7",
+    "path": "^0.12.7",
+    "sass-loader": "^6.0.6",
+    "source-map-loader": "^0.2.1",
+    "style-loader": "^0.13.1",
+    "typescript": "^3.1.3",
+    "url-loader": "^0.5.7",
+    "webpack-stream": "^4.0.0"
+  }
+}
