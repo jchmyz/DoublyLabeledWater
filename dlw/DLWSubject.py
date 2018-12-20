@@ -118,9 +118,9 @@ class DLWSubject:
             self.d_ratios = self.d_deltas_to_ratios()
             self.o18_ratios = self.o18_deltas_to_ratios()
 
-            self.kd = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
-            self.ko = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
-            self.ko_kd_ratio = self.ko / self.kd
+            self.kd = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)  # kd/hour
+            self.ko = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes) # ko/hour
+            self.ko_kd_ratio = self.ko / self.kd #err flag #5
 
             self.nd_plat_4hr = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
                                                            self.dose_enrichments[0], self.d_ratios[1],
@@ -145,7 +145,7 @@ class DLWSubject:
                                                                 self.dose_enrichments[1], self.ko, self.o18_ratios,
                                                                 self.sample_datetimes)
 
-            self.dil_space_ratio = self.nd_plat_4hr / self.no_plat_4hr
+            self.dil_space_ratio = self.nd_plat_4hr / self.no_plat_4hr  # dilution space ratio err flag
 
             self.adj_nd_int_avg = self.adj_dilution_space(self.nd_int_avg, self.subject_weights)
             self.adj_no_int_avg = self.adj_dilution_space(self.no_int_avg, self.subject_weights)
@@ -153,35 +153,35 @@ class DLWSubject:
             self.adj_nd_plat_avg = self.adj_dilution_space(self.nd_plat_avg, self.subject_weights)
             self.adj_no_plat_avg = self.adj_dilution_space(self.no_plat_avg, self.subject_weights)
 
-            self.adj_nd_plat_avg_kg = self.adj_nd_plat_avg * STANDARD_WATER_MOL_MASS
-            self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS
+            self.adj_nd_plat_avg_kg = self.adj_nd_plat_avg * STANDARD_WATER_MOL_MASS  # top line ndp kg
+            self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS  # nop kg
 
             # self.rh2o = (self.adj_nd_plat_avg_kg * self.kd * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
             self.total_body_water_d_kg = self.adj_nd_plat_avg_kg / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.adj_no_plat_avg_kg / POP_DIL_SPACE_O
-            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2
+            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
 
-            self.fat_free_mass = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR
-            self.fat_mass = self.subject_weights[0] - self.fat_free_mass
-            self.body_fat_percent = self.fat_mass / self.subject_weights[0] * 100
+            self.fat_free_mass = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR # fat free mass
+            self.fat_mass = self.subject_weights[0] - self.fat_free_mass    # fat mass
+            self.body_fat_percent = self.fat_mass / self.subject_weights[0] * 100  # body fat percent
 
             self.schoeller_co2_int = self.calc_schoeller_co2(self.adj_nd_int_avg, self.adj_no_int_avg,
                                                              self.kd, self.ko)
             self.schoeller_co2_plat = self.calc_schoeller_co2(self.adj_nd_plat_avg, self.adj_no_plat_avg,
                                                               self.kd, self.ko)
 
-            self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY
-            self.schoeller_co2_int_L_day = self.schoeller_co2_int * LITERS_PER_MOL
+            self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY  # rco2 mols/day
+            self.schoeller_co2_int_L_day = self.schoeller_co2_int * LITERS_PER_MOL # r2co2 l/day
 
-            self.schoeller_tee_int = self.co2_to_tee(self.schoeller_co2_int)
+            self.schoeller_tee_int = self.co2_to_tee(self.schoeller_co2_int)  # ee kcal/day
             self.schoeller_tee_plat = self.co2_to_tee(self.schoeller_co2_plat)
 
-            self.schoeller_tee_int_mj_day = self.schoeller_tee_int * MJ_PER_KCAL
+            self.schoeller_tee_int_mj_day = self.schoeller_tee_int * MJ_PER_KCAL # ee mj/day
             self.schoeller_tee_plat_mj_day = self.schoeller_tee_plat * MJ_PER_KCAL
 
-            self.d_ratio_percent = self.percent_difference(self.d_ratios[1], self.d_ratios[2])
-            self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1], self.o18_ratios[2])
-            self.ee_check = self.ee_consistency_check()
+            self.d_ratio_percent = self.percent_difference(self.d_ratios[1], self.d_ratios[2])  #err flag 2 h plateau < 5%
+            self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1], self.o18_ratios[2]) # err flag o18 plateau
+            self.ee_check = self.ee_consistency_check()  # err flag # 4 pd4
 
         else:
             raise ValueError('Arrays not correct size')

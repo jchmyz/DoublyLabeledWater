@@ -32,16 +32,30 @@ def calculate_from_inputs():
             dlw_results.save_results_csv(desired_csv_filename + '.csv')
 
     return json.dumps({
-        "ko kd ratio": dlw_results.ko_kd_ratio,
-        "adj nd plat avg kg": dlw_results.adj_nd_plat_avg_kg,
-        "adj no plat avg kg": dlw_results.adj_no_plat_avg_kg,
-        "dil space ratio": dlw_results.dil_space_ratio,
-        "rCO2_mol/day": dlw_results.schoeller_co2_int_mol_day,
-        "rCO2_L/day": dlw_results.schoeller_co2_int_L_day,
-        "schoeller_tee_int": dlw_results.schoeller_tee_int,
-        "schoeller_tee_int_mj_day": dlw_results.schoeller_tee_int_mj_day,
+        "calculations": {
+            "NdP (kg)": round(dlw_results.adj_nd_plat_avg_kg, 2),
+            "kd/hour": round(dlw_results.kd, 2),
+            "NoP (kg)": round(dlw_results.adj_no_plat_avg_kg, 2),
+            "ko/hour": round(dlw_results.ko, 2),
+            "Total Body Weight Average (kg)": round(dlw_results.total_body_water_ave_kg, 2),
+            "Fat Free Mass (kg)": round(dlw_results.fat_free_mass, 2),
+            "Fat Mass (kg)": round(dlw_results.fat_free_mass, 2),
+            "Body Fat Percentage": round(dlw_results.body_fat_percent, 2)
+        },
+        "rco2_ee": {
+            "rCO2 (mol/day)": round(dlw_results.schoeller_co2_int_mol_day, 2),
+            "rCO2 (L/day)": round(dlw_results.schoeller_co2_int_L_day, 2),
+            "EE (kcal/day)": round(dlw_results.schoeller_tee_int, 2),
+            "EE (MJ/day)": round(dlw_results.schoeller_tee_int_mj_day, 2)
+        },
+        "error_flags": {
+            "2H plateau (<5%)": round(dlw_results.d_ratio_percent, 2),
+            "18O Plateau (<5%)": round(dlw_results.o18_ratio_percent, 2),
+            "DS ratio (1.000 - 1.070)": round(dlw_results.dil_space_ratio, 2),
+            "EE (PD4-ED4 vs. PD5-ED5, <10%)": round(dlw_results.ee_check, 2),
+            "Ko/kd (1.1 - 1.7)": round(dlw_results.ko_kd_ratio, 2)
+        }
     })
-
 
 @app.route('/')
 def root():
