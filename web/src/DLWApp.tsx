@@ -22,6 +22,17 @@ const ELEMENTS = [DEUTERIUM, OXYGEN];
 const NUM_SAMPLE_TIMES = 5;
 const SAMPLE_LABELS = ['Background', 'PD4', 'PD5', 'ED4', 'ED5'];
 
+interface ResultPair {
+    label: string,
+    value: string | {}
+}
+
+interface ResultTypes {
+    calculations: ResultPair[],
+    rco2_ee: ResultPair[],
+    error_flags: ResultPair[]
+}
+
 
 interface DLWState {
     deuterium_deltas: string[],
@@ -40,7 +51,7 @@ interface DLWState {
     dose_enrichments_validated: boolean,
     subject_weights_validated: boolean,
 
-    results: string[],
+    results: ResultTypes
     csv_name: string,
 }
 
@@ -64,7 +75,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             dose_enrichments_validated: false,
             subject_weights_validated: false,
 
-            results: [],
+            results: {calculations: [], rco2_ee: [], error_flags: []},
             csv_name: "",
         };
     }
@@ -116,18 +127,47 @@ export class DLWApp extends React.Component<any, DLWState> {
         }
 
         let results_display: JSX.Element = <div/>;
-        if (this.state.results.length > 0) {
-            let results_p: JSX.Element[] = [];
-            for (let result of this.state.results) {
-                results_p.push(<p>{result}</p>);
+        if (this.state.results.calculations.length > 0) {
+            let results_calculations: JSX.Element[] = [];
+            let results_rco2_ee: JSX.Element[] = [];
+            let results_error_flags: JSX.Element[] = [];
+            for (let result of this.state.results.calculations) {
+                results_calculations.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result.label + ":"}</p>
+                        <p className="result-value">{result.value}</p>
+                    </div>);
             }
-
+            for (let result of this.state.results.rco2_ee) {
+                results_rco2_ee.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result.label + ":"}</p>
+                        <p className="result-value">{result.value}</p>
+                    </div>);
+            }
+            for (let result of this.state.results.error_flags) {
+                results_error_flags.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result.label + ":"}</p>
+                        <p className="result-value">{result.value}</p>
+                    </div>);
+            }
             results_display = (
                 <div className='results-display'>
                     <Card className='results-card'>
-                        <div>
-                            <h4>Calculations</h4>
-                            {results_p}
+                        <div className='result-sections'>
+                            <div className='result-section'>
+                                <h5 className='result-header-calc'>Calculations</h5>
+                                {results_calculations}
+                            </div>
+                            <div className='result-section'>
+                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
+                                {results_rco2_ee}
+                            </div>
+                            <div className='result-section'>
+                                <h5 className='result-header-error'>Error Flags</h5>
+                                {results_error_flags}
+                            </div>
                         </div>
                     </Card>
                 </div>
@@ -215,12 +255,35 @@ export class DLWApp extends React.Component<any, DLWState> {
             }
         );
         console.log('got results', results);
-        let result_entries = Object.entries(results);
-        let results_array = [];
-        for (let [name, value] of result_entries) {
-            results_array.push(name + ": " + value);
+        let result_calculations_array = results.calculations;
+        let result_err_flags_array = results.error_flags;
+        let result_rco2_ee_array = results.rco2_ee;
+
+        let result_entries_calculations = Object.entries(result_calculations_array);
+        let result_entries_err_flags = Object.entries(result_err_flags_array);
+        let result_entries_rco2_ee = Object.entries(result_rco2_ee_array);
+
+        let result_calcuation_strings = [];
+        let result_err_flags_strings = [];
+        let result_rco2_ee_strings = [];
+
+        for (let [name, value] of result_entries_calculations) {
+            result_calcuation_strings.push({label: name, value: value});
         }
-        this.setState({results: results_array});
+        for (let [name, value] of result_entries_err_flags) {
+            result_err_flags_strings.push({label: name, value: value});
+        }
+        for (let [name, value] of result_entries_rco2_ee) {
+            result_rco2_ee_strings.push({label: name, value: value});
+        }
+
+        this.setState({
+                          results: {
+                              calculations: result_calcuation_strings,
+                              rco2_ee: result_rco2_ee_strings,
+                              error_flags: result_err_flags_strings
+                          }
+                      });
     };
 
     check_numerical_inputs = (input_aray: (string | number)[]) => {
