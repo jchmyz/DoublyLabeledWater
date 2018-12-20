@@ -352,6 +352,8 @@ class DLWSubject:
         return diff
 
     def save_results_csv(self, filename):
+        """ Save the results to a csv file
+            :param: filename(string), the name of the file to which to save"""
         write_header = 'rCO2_mol/day,rCO2_L/day,EE_kcal/day,EE_MJ/day'
         write_data = np.asarray([[self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int,
                                   self.schoeller_tee_int_mj_day]])
