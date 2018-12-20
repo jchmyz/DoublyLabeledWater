@@ -22,10 +22,15 @@ const ELEMENTS = [DEUTERIUM, OXYGEN];
 const NUM_SAMPLE_TIMES = 5;
 const SAMPLE_LABELS = ['Background', 'PD4', 'PD5', 'ED4', 'ED5'];
 
+interface ResultPair {
+    label: string,
+    value: string | {}
+}
+
 interface ResultTypes {
-    calculations: string[],
-    rco2_ee: string[],
-    error_flags: string[]
+    calculations: ResultPair[],
+    rco2_ee: ResultPair[],
+    error_flags: ResultPair[]
 }
 
 
@@ -127,28 +132,40 @@ export class DLWApp extends React.Component<any, DLWState> {
             let results_rco2_ee: JSX.Element[] = [];
             let results_error_flags: JSX.Element[] = [];
             for (let result of this.state.results.calculations) {
-                results_calculations.push(<p>{result}</p>);
+                results_calculations.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result.label + ":"}</p>
+                        <p className="result-value">{result.value}</p>
+                    </div>);
             }
             for (let result of this.state.results.rco2_ee) {
-                results_rco2_ee.push(<p>{result}</p>);
+                results_rco2_ee.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result.label + ":"}</p>
+                        <p className="result-value">{result.value}</p>
+                    </div>);
             }
             for (let result of this.state.results.error_flags) {
-                results_error_flags.push(<p>{result}</p>);
+                results_error_flags.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result.label + ":"}</p>
+                        <p className="result-value">{result.value}</p>
+                    </div>);
             }
             results_display = (
                 <div className='results-display'>
                     <Card className='results-card'>
                         <div className='result-sections'>
-                            <div>
-                                <h5>Calculations</h5>
+                            <div className='result-section'>
+                                <h5 className='result-header-calc'>Calculations</h5>
                                 {results_calculations}
                             </div>
-                            <div>
-                                <h5>rCO2 and EE, intercept method</h5>
+                            <div className='result-section'>
+                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
                                 {results_rco2_ee}
                             </div>
-                            <div>
-                                <h5>Error Flags</h5>
+                            <div className='result-section'>
+                                <h5 className='result-header-error'>Error Flags</h5>
                                 {results_error_flags}
                             </div>
                         </div>
@@ -251,13 +268,13 @@ export class DLWApp extends React.Component<any, DLWState> {
         let result_rco2_ee_strings = [];
 
         for (let [name, value] of result_entries_calculations) {
-            result_calcuation_strings.push(name + ": " + value);
+            result_calcuation_strings.push({label: name, value: value});
         }
         for (let [name, value] of result_entries_err_flags) {
-            result_err_flags_strings.push(name + ": " + value);
+            result_err_flags_strings.push({label: name, value: value});
         }
         for (let [name, value] of result_entries_rco2_ee) {
-            result_rco2_ee_strings.push(name + ": " + value);
+            result_rco2_ee_strings.push({label: name, value: value});
         }
 
         this.setState({

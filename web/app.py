@@ -34,9 +34,9 @@ def calculate_from_inputs():
     return json.dumps({
         "calculations": {
             "NdP (kg)": round(dlw_results.adj_nd_plat_avg_kg, 2),
-            "kd/hour": round(dlw_results.kd, 2),
+            "kd/hour": round(dlw_results.kd, 3),
             "NoP (kg)": round(dlw_results.adj_no_plat_avg_kg, 2),
-            "ko/hour": round(dlw_results.ko, 2),
+            "ko/hour": round(dlw_results.ko, 3),
             "Total Body Weight Average (kg)": round(dlw_results.total_body_water_ave_kg, 2),
             "Fat Free Mass (kg)": round(dlw_results.fat_free_mass, 2),
             "Fat Mass (kg)": round(dlw_results.fat_free_mass, 2),
