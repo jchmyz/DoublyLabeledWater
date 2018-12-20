@@ -43,8 +43,8 @@ class TestDLWSubject(TestCase):
         self.assertAlmostEqual(26.07428756, test_subject.total_body_water_d_kg)
         self.assertAlmostEqual(26.24010705, test_subject.total_body_water_o_kg)
         self.assertAlmostEqual(26.157197304, test_subject.total_body_water_ave_kg)
-        self.assertAlmostEqual(35.8317771287, test_subject.fat_free_mass)
-        self.assertAlmostEqual(13.328222871, test_subject.fat_mass)
+        self.assertAlmostEqual(35.8317771287, test_subject.fat_free_mass_kg)
+        self.assertAlmostEqual(13.328222871, test_subject.fat_mass_kg)
         self.assertAlmostEqual(27.111926101, test_subject.body_fat_percent)
         self.assertAlmostEqual(14.543278471, test_subject.schoeller_co2_int_mol_day)
         self.assertAlmostEqual(13.582210152, test_subject.schoeller_co2_int_L_day)
@@ -64,7 +64,7 @@ class TestDLWSubject(TestCase):
     def test_average_turnover_2pt(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(0.005763318, test_subject.kd)
+        self.assertAlmostEqual(0.005763318, test_subject.kd_per_hr)
 
     def test_incorrect_ratios(self):
         with self.assertRaises(ValueError) as context:
@@ -96,7 +96,7 @@ class TestDLWSubject(TestCase):
     def test_co2_to_tee(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(1925.89140638, test_subject.schoeller_tee_plat)
+        self.assertAlmostEqual(1925.89140638, test_subject.schoeller_tee_plat_kcal_day)
 
     def test_percent_difference(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
