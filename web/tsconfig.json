@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "target": "es2017",
+    "jsx": "react",
+    "noEmit": true,
+    "module": "commonjs",
+    "experimentalDecorators": true
+  },
+  "include": [
+    "src/**/*"
+  ]
+}

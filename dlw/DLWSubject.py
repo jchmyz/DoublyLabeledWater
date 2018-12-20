@@ -157,6 +157,7 @@ class DLWSubject:
             self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS
 
             # self.rh2o = (self.adj_nd_plat_avg_kg * self.kd_per_hr * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
+
             self.total_body_water_d_kg = self.adj_nd_plat_avg_kg / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.adj_no_plat_avg_kg / POP_DIL_SPACE_O
             self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2
