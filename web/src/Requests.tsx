@@ -1,7 +1,7 @@
 import * as React from "react";
 import {CalculationInputs} from "./types/CalculationInputs";
 
-async function calculate_from_inputs(inputs: CalculationInputs) {
+export async function calculate_from_inputs(inputs: CalculationInputs) {
      let fetch_args = {
         method: 'POST',
         headers: {

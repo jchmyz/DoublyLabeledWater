@@ -71,7 +71,7 @@ class TestDLWSubject(TestCase):
             dlw.DLWSubject(INCORRECT_RATIOS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                            MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
             self.assertTrue(
-                'Isotope ratios do not conform to pattern background < final < plateau' in context.exception)
+                    'Isotope ratios do not conform to pattern background < final < plateau' in context.exception)
 
     def test_dilution_space_plateau(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,

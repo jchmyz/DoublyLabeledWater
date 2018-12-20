@@ -17,6 +17,11 @@ TS_PROJECT = ts.createProject
   strictNullChecks: true
   target: "es5"
   jsx: "react"
+  lib: [
+    "DOM"
+    "ScriptHost"
+    "es2017"
+  ]
 
 # a newer() that can check either a .coffee or .cjsx
 # against its compiled JavaScript output

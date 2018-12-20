@@ -156,7 +156,7 @@ class DLWSubject:
             self.adj_nd_plat_avg_kg = self.adj_nd_plat_avg * STANDARD_WATER_MOL_MASS
             self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS
 
-           # self.rh2o = (self.adj_nd_plat_avg_kg * self.kd * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
+            # self.rh2o = (self.adj_nd_plat_avg_kg * self.kd * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
             self.total_body_water_d_kg = self.adj_nd_plat_avg_kg / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.adj_no_plat_avg_kg / POP_DIL_SPACE_O
             self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2
@@ -352,7 +352,7 @@ class DLWSubject:
         return diff
 
     def save_results_csv(self, filename):
-        write_header = 'rCO2_mol/day, rCO2_L/day, EE_kcal/day, EE_MJ/day'
-        write_data = np.array([self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int,
-                               self.schoeller_tee_int_mj_day])
-        np.savetxt(filename, write_data, delimiter = ',', header=write_header)
+        write_header = 'rCO2_mol/day,rCO2_L/day,EE_kcal/day,EE_MJ/day'
+        write_data = np.asarray([[self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int,
+                                  self.schoeller_tee_int_mj_day]])
+        np.savetxt(filename, write_data, delimiter=',', header=write_header, comments='')
