@@ -35,8 +35,8 @@ class DLWSubject:
            subject_weights ([float]): initial and final weights of the subject in kg
            d_ratios (np.array): deuterium ratios of subject samples
            o18_ratios (np.array): 18O ratios of subject samples
-           kd (float): deuterium turnover rate in 1/hr
-           ko (float): oxygen turnover rate in 1/hr
+           kd_per_hr (float): deuterium turnover rate in 1/hr
+           ko_per_hr (float): oxygen turnover rate in 1/hr
            ko_kd_ratio (float): ratio of oxygen and deuterium turnover rates
            nd_plat_4hr (float): deuterium dilution space calculated by the plateau method using the 4hr sample in mol
            no_plat_4hr (float): 18O dilution space calculated by the plateau method using the 4hr sample in mol
@@ -64,8 +64,8 @@ class DLWSubject:
            total_body_water_d_kg (float): total body water calculated from the average D plateau dilution space, in kg
            total_body_water_o_kg (float): total body water calculated from the average 18O plateau dilution space, in kg
            total_body_water_ave_kg (float): average of total_body_water_d_kg and total_body_water_o_kg, in kg
-           fat_free_mass (float): fat free mass of the subject, in kg
-           fat_mass (float): fat mass of the subject, in kg
+           fat_free_mass_kg (float): fat free mass of the subject, in kg
+           fat_mass_kg (float): fat mass of the subject, in kg
            body_fat_percent (float): body fat percent of the subject, in percent
            schoeller_co2_int (float): CO2 production rate in mol/hr using the equation of Schoeller (equation A6, 1986
                               as updated in 1988) using the weight adjusted, average, intercept dilution spaces
@@ -75,10 +75,10 @@ class DLWSubject:
                             A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
            schoeller_co2_int_L_day (float): CO2 production rate in L/day using the equation of Schoeller (equation
                             A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
-           schoeller_tee_int (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
+           schoeller_tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
                             values calculated via Schoeller and the weight adjusted, average, intercept dilution spaces,
                             in kcal/day
-           schoeller_tee_plat (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
+           schoeller_tee_plat_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
                               values calculated via Schoeller and the weight adjusted, average, plateau dilution spaces,
                               in kcal/day
            schoeller_tee_int_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
@@ -118,9 +118,9 @@ class DLWSubject:
             self.d_ratios = self.d_deltas_to_ratios()
             self.o18_ratios = self.o18_deltas_to_ratios()
 
-            self.kd = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
-            self.ko = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
-            self.ko_kd_ratio = self.ko / self.kd
+            self.kd_per_hr = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
+            self.ko_per_hr = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
+            self.ko_kd_ratio = self.ko_per_hr / self.kd_per_hr
 
             self.nd_plat_4hr = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
                                                            self.dose_enrichments[0], self.d_ratios[1],
@@ -139,10 +139,10 @@ class DLWSubject:
                                                            self.o18_ratios[0])
 
             self.nd_int_avg = self.avg_intercept_dilution_space(self.dose_weights[0], self.mol_masses[0],
-                                                                self.dose_enrichments[0], self.kd, self.d_ratios,
+                                                                self.dose_enrichments[0], self.kd_per_hr, self.d_ratios,
                                                                 self.sample_datetimes)
             self.no_int_avg = self.avg_intercept_dilution_space(self.dose_weights[1], self.mol_masses[1],
-                                                                self.dose_enrichments[1], self.ko, self.o18_ratios,
+                                                                self.dose_enrichments[1], self.ko_per_hr, self.o18_ratios,
                                                                 self.sample_datetimes)
 
             self.dil_space_ratio = self.nd_plat_4hr / self.no_plat_4hr
@@ -156,28 +156,28 @@ class DLWSubject:
             self.adj_nd_plat_avg_kg = self.adj_nd_plat_avg * STANDARD_WATER_MOL_MASS
             self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS
 
-           # self.rh2o = (self.adj_nd_plat_avg_kg * self.kd * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
+            # self.rh2o = (self.adj_nd_plat_avg_kg * self.kd_per_hr * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
             self.total_body_water_d_kg = self.adj_nd_plat_avg_kg / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.adj_no_plat_avg_kg / POP_DIL_SPACE_O
             self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2
 
-            self.fat_free_mass = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR
-            self.fat_mass = self.subject_weights[0] - self.fat_free_mass
-            self.body_fat_percent = self.fat_mass / self.subject_weights[0] * 100
+            self.fat_free_mass_kg = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR
+            self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg
+            self.body_fat_percent = self.fat_mass_kg / self.subject_weights[0] * 100
 
             self.schoeller_co2_int = self.calc_schoeller_co2(self.adj_nd_int_avg, self.adj_no_int_avg,
-                                                             self.kd, self.ko)
+                                                             self.kd_per_hr, self.ko_per_hr)
             self.schoeller_co2_plat = self.calc_schoeller_co2(self.adj_nd_plat_avg, self.adj_no_plat_avg,
-                                                              self.kd, self.ko)
+                                                              self.kd_per_hr, self.ko_per_hr)
 
             self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY
             self.schoeller_co2_int_L_day = self.schoeller_co2_int * LITERS_PER_MOL
 
-            self.schoeller_tee_int = self.co2_to_tee(self.schoeller_co2_int)
-            self.schoeller_tee_plat = self.co2_to_tee(self.schoeller_co2_plat)
+            self.schoeller_tee_int_kcal_day = self.co2_to_tee(self.schoeller_co2_int)
+            self.schoeller_tee_plat_kcal_day = self.co2_to_tee(self.schoeller_co2_plat)
 
-            self.schoeller_tee_int_mj_day = self.schoeller_tee_int * MJ_PER_KCAL
-            self.schoeller_tee_plat_mj_day = self.schoeller_tee_plat * MJ_PER_KCAL
+            self.schoeller_tee_int_mj_day = self.schoeller_tee_int_kcal_day * MJ_PER_KCAL
+            self.schoeller_tee_plat_mj_day = self.schoeller_tee_plat_kcal_day * MJ_PER_KCAL
 
             self.d_ratio_percent = self.percent_difference(self.d_ratios[1], self.d_ratios[2])
             self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1], self.o18_ratios[2])
@@ -309,7 +309,7 @@ class DLWSubject:
         """
         n = ((no / 1.01) + (nd / 1.04)) / 2
         co2_prod = (n / 2.078) * (1.01 * ko - 1.04 * kd) - 0.0246 * n * 1.05 * (1.01 * ko - 1.04 * kd)
-        # reduces to co2prod = n*(0.459952*ko - 0.47362*kd)
+        # reduces to co2prod = n*(0.459952*ko_per_hr - 0.47362*kd_per_hr)
         return co2_prod
 
     @staticmethod
@@ -355,6 +355,6 @@ class DLWSubject:
         """ Save the results to a csv file
             :param: filename(string), the name of the file to which to save"""
         write_header = 'rCO2_mol/day,rCO2_L/day,EE_kcal/day,EE_MJ/day'
-        write_data = np.asarray([[self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int,
+        write_data = np.asarray([[self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int_kcal_day,
                                   self.schoeller_tee_int_mj_day]])
         np.savetxt(filename, write_data, delimiter=',', header=write_header, comments='')
