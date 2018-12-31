@@ -34,18 +34,18 @@ def calculate_from_inputs():
     return json.dumps({
         "calculations": {
             "NdP (kg)": round(dlw_results.adj_nd_plat_avg_kg, 2),
-            "kd/hour": round(dlw_results.kd, 3),
+            "kd/hour": round(dlw_results.kd_per_hr, 3),
             "NoP (kg)": round(dlw_results.adj_no_plat_avg_kg, 2),
-            "ko/hour": round(dlw_results.ko, 3),
+            "ko/hour": round(dlw_results.ko_per_hr, 3),
             "Total Body Weight Average (kg)": round(dlw_results.total_body_water_ave_kg, 2),
-            "Fat Free Mass (kg)": round(dlw_results.fat_free_mass, 2),
-            "Fat Mass (kg)": round(dlw_results.fat_free_mass, 2),
+            "Fat Free Mass (kg)": round(dlw_results.fat_free_mass_kg, 2),
+            "Fat Mass (kg)": round(dlw_results.fat_free_mass_kg, 2),
             "Body Fat Percentage": round(dlw_results.body_fat_percent, 2)
         },
         "rco2_ee": {
             "rCO2 (mol/day)": round(dlw_results.schoeller_co2_int_mol_day, 2),
             "rCO2 (L/day)": round(dlw_results.schoeller_co2_int_L_day, 2),
-            "EE (kcal/day)": round(dlw_results.schoeller_tee_int, 2),
+            "EE (kcal/day)": round(dlw_results.schoeller_tee_int_kcal_day, 2),
             "EE (MJ/day)": round(dlw_results.schoeller_tee_int_mj_day, 2)
         },
         "error_flags": {

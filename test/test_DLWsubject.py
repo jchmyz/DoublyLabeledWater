@@ -37,7 +37,7 @@ class TestDLWSubject(TestCase):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
         self.assertAlmostEqual(1.19261881061, test_subject.ko_kd_ratio)
-        self.assertAlmostEqual(27.1433333518, test_subject.adj_nd_plat_avg_kg)
+        self.assertAlmostEqual(27.1434659266, test_subject.adj_nd_plat_avg_kg)
         self.assertAlmostEqual(26.4237877954, test_subject.adj_no_plat_avg_kg)
         self.assertAlmostEqual(1.0271786087, test_subject.dil_space_ratio)
         self.assertAlmostEqual(26.07428756, test_subject.total_body_water_d_kg)
@@ -71,12 +71,12 @@ class TestDLWSubject(TestCase):
             dlw.DLWSubject(INCORRECT_RATIOS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                            MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
             self.assertTrue(
-                    'Isotope ratios do not conform to pattern background < final < plateau' in context.exception)
+                'Isotope ratios do not conform to pattern background < final < plateau' in context.exception)
 
     def test_dilution_space_plateau(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(1495.020473886, test_subject.nd_plat_4hr)
+        self.assertAlmostEqual(1495.020473886, test_subject.nd_plat_4hr_mol)
 
     def test_avg_intercept_dilution_space(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
@@ -86,7 +86,7 @@ class TestDLWSubject(TestCase):
     def test_adj_dilution_space(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(1499.54385831, test_subject.adj_nd_plat_avg)
+        self.assertAlmostEqual(1499.551182449, test_subject.adj_nd_plat_avg)
 
     def test_calc_schoeller_co2(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,

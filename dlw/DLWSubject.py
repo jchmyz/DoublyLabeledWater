@@ -38,11 +38,11 @@ class DLWSubject:
            kd_per_hr (float): deuterium turnover rate in 1/hr
            ko_per_hr (float): oxygen turnover rate in 1/hr
            ko_kd_ratio (float): ratio of oxygen and deuterium turnover rates
-           nd_plat_4hr (float): deuterium dilution space calculated by the plateau method using the 4hr sample in mol
-           no_plat_4hr (float): 18O dilution space calculated by the plateau method using the 4hr sample in mol
-           nd_plat_avg (float): deuterium dilution space calculated by the plateau method using the average of the 4hr
+           nd_plat_4hr_mol (float): deuterium dilution space calculated by the plateau method using the 4hr sample in mol
+           no_plat_4hr_mol (float): 18O dilution space calculated by the plateau method using the 4hr sample in mol
+           nd_plat_avg_mol (float): deuterium dilution space calculated by the plateau method using the average of the 4hr
                         and 5hr samples in mol
-           no_plat_avg (float): 18O dilution space calculated by the plateau method using the average of the 4hr and 5
+           no_plat_avg_mol (float): 18O dilution space calculated by the plateau method using the average of the 4hr and 5
                         hr samples in mol
            nd_int_avg (float): deuterium dilution space calculated by the intercept method using the average of the 4hr
                         and 5hr samples in mol
@@ -122,37 +122,38 @@ class DLWSubject:
             self.ko_per_hr = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
             self.ko_kd_ratio = self.ko_per_hr / self.kd_per_hr
 
+            self.nd_plat_4hr_mol = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
+                                                               self.dose_enrichments[0], self.d_ratios[1],
+                                                               self.d_ratios[0])
+            self.no_plat_4hr_mol = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
+                                                               self.dose_enrichments[1], self.o18_ratios[1],
+                                                               self.o18_ratios[0])
 
-            self.nd_plat_4hr = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
-                                                           self.dose_enrichments[0], self.d_ratios[1],
-                                                           self.d_ratios[0])
-            self.no_plat_4hr = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
-                                                           self.dose_enrichments[1], self.o18_ratios[1],
-                                                           self.o18_ratios[0])
+            self.nd_plat_5hr_mol = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
+                                                               self.dose_enrichments[0], self.d_ratios[2],
+                                                               self.d_ratios[0])
+            self.no_plat_5hr_mol = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
+                                                               self.dose_enrichments[1], self.o18_ratios[2],
+                                                               self.o18_ratios[0])
 
-            self.nd_plat_avg = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
-                                                           self.dose_enrichments[0],
-                                                           (self.d_ratios[1] + self.d_ratios[2]) / 2,
-                                                           self.d_ratios[0])
-            self.no_plat_avg = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
-                                                           self.dose_enrichments[1],
-                                                           (self.o18_ratios[1] + self.o18_ratios[2]) / 2,
-                                                           self.o18_ratios[0])
+            self.nd_plat_avg_mol = (self.nd_plat_4hr_mol + self.nd_plat_5hr_mol) / 2
+            self.no_plat_avg_mol = (self.no_plat_4hr_mol + self.no_plat_5hr_mol) / 2
 
             self.nd_int_avg = self.avg_intercept_dilution_space(self.dose_weights[0], self.mol_masses[0],
                                                                 self.dose_enrichments[0], self.kd_per_hr, self.d_ratios,
                                                                 self.sample_datetimes)
             self.no_int_avg = self.avg_intercept_dilution_space(self.dose_weights[1], self.mol_masses[1],
-                                                                self.dose_enrichments[1], self.ko_per_hr, self.o18_ratios,
+                                                                self.dose_enrichments[1], self.ko_per_hr,
+                                                                self.o18_ratios,
                                                                 self.sample_datetimes)
 
-            self.dil_space_ratio = self.nd_plat_4hr / self.no_plat_4hr  # dilution space ratio err flag
+            self.dil_space_ratio = self.nd_plat_4hr_mol / self.no_plat_4hr_mol  # dilution space ratio err flag
 
             self.adj_nd_int_avg = self.adj_dilution_space(self.nd_int_avg, self.subject_weights)
             self.adj_no_int_avg = self.adj_dilution_space(self.no_int_avg, self.subject_weights)
 
-            self.adj_nd_plat_avg = self.adj_dilution_space(self.nd_plat_avg, self.subject_weights)
-            self.adj_no_plat_avg = self.adj_dilution_space(self.no_plat_avg, self.subject_weights)
+            self.adj_nd_plat_avg = self.adj_dilution_space(self.nd_plat_avg_mol, self.subject_weights)
+            self.adj_no_plat_avg = self.adj_dilution_space(self.no_plat_avg_mol, self.subject_weights)
 
             self.adj_nd_plat_avg_kg = self.adj_nd_plat_avg * STANDARD_WATER_MOL_MASS  # top line ndp kg
             self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS  # nop kg
@@ -161,7 +162,8 @@ class DLWSubject:
 
             self.total_body_water_d_kg = self.adj_nd_plat_avg_kg / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.adj_no_plat_avg_kg / POP_DIL_SPACE_O
-            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
+            self.total_body_water_ave_kg = (
+                                                       self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
 
             self.fat_free_mass_kg = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR
             self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg
@@ -173,7 +175,7 @@ class DLWSubject:
                                                               self.kd_per_hr, self.ko_per_hr)
 
             self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY  # rco2 mols/day
-            self.schoeller_co2_int_L_day = self.schoeller_co2_int * LITERS_PER_MOL # r2co2 l/day
+            self.schoeller_co2_int_L_day = self.schoeller_co2_int * LITERS_PER_MOL  # r2co2 l/day
 
             self.schoeller_tee_int_kcal_day = self.co2_to_tee(self.schoeller_co2_int)
             self.schoeller_tee_plat_kcal_day = self.co2_to_tee(self.schoeller_co2_plat)
@@ -181,8 +183,10 @@ class DLWSubject:
             self.schoeller_tee_int_mj_day = self.schoeller_tee_int_kcal_day * MJ_PER_KCAL
             self.schoeller_tee_plat_mj_day = self.schoeller_tee_plat_kcal_day * MJ_PER_KCAL
 
-            self.d_ratio_percent = self.percent_difference(self.d_ratios[1], self.d_ratios[2])  #err flag 2 h plateau < 5%
-            self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1], self.o18_ratios[2]) # err flag o18 plateau
+            self.d_ratio_percent = self.percent_difference(self.d_ratios[1],
+                                                           self.d_ratios[2])  # err flag 2 h plateau < 5%
+            self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1],
+                                                             self.o18_ratios[2])  # err flag o18 plateau
             self.ee_check = self.ee_consistency_check()  # err flag # 4 pd4
 
         else:
@@ -339,13 +343,8 @@ class DLWSubject:
         kd_5hr = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
         ko_5hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
 
-        nd_plat_5hr = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
-                                                  self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
-        no_plat_5hr = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
-                                                  self.dose_enrichments[1], self.o18_ratios[2], self.o18_ratios[0])
-
-        schoeller_4hr = self.calc_schoeller_co2(self.nd_plat_4hr, self.no_plat_4hr, kd_4hr, ko_4hr)
-        schoeller_5hr = self.calc_schoeller_co2(nd_plat_5hr, no_plat_5hr, kd_5hr, ko_5hr)
+        schoeller_4hr = self.calc_schoeller_co2(self.nd_plat_4hr_mol, self.no_plat_4hr_mol, kd_4hr, ko_4hr)
+        schoeller_5hr = self.calc_schoeller_co2(self.nd_plat_5hr_mol, self.no_plat_5hr_mol, kd_5hr, ko_5hr)
 
         tee_4hr = self.co2_to_tee(schoeller_4hr)
         tee_5hr = self.co2_to_tee(schoeller_5hr)
@@ -357,6 +356,7 @@ class DLWSubject:
         """ Save the results to a csv file
             :param: filename(string), the name of the file to which to save"""
         write_header = 'rCO2_mol/day,rCO2_L/day,EE_kcal/day,EE_MJ/day'
-        write_data = np.asarray([[self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int_kcal_day,
-                                  self.schoeller_tee_int_mj_day]])
+        write_data = np.asarray(
+            [[self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int_kcal_day,
+              self.schoeller_tee_int_mj_day]])
         np.savetxt(filename, write_data, delimiter=',', header=write_header, comments='')
