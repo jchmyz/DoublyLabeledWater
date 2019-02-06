@@ -38,29 +38,37 @@ class DLWSubject:
            kd_per_hr (float): deuterium turnover rate in 1/hr
            ko_per_hr (float): oxygen turnover rate in 1/hr
            ko_kd_ratio (float): ratio of oxygen and deuterium turnover rates
-           nd_plat_4hr_mol (float): deuterium dilution space calculated by the plateau method using the 4hr sample in mol
-           no_plat_4hr_mol (float): 18O dilution space calculated by the plateau method using the 4hr sample in mol
-           nd_plat_avg_mol (float): deuterium dilution space calculated by the plateau method using the average of the 4hr
-                        and 5hr samples in mol
-           no_plat_avg_mol (float): 18O dilution space calculated by the plateau method using the average of the 4hr and 5
-                        hr samples in mol
-           nd_int_avg (float): deuterium dilution space calculated by the intercept method using the average of the 4hr
-                        and 5hr samples in mol
-           no_int_avg (float): 18O dilution space calculated by the intercept method using the average of the 4hr and 5
-                        hr samples in mol
-           dil_space_ratio (float): ratio of the 4 hr plateau deuterium and 18O dilution spaces
-           adj_nd_int_avg (float): deuterium average intercept dilution space adjusted for the subject weight change
-                           over the sampling period, in mol
-           adj_no_int_avg (float): 18O average intercept dilution space adjusted for the subject weight change over the
-                           sampling period, in mol
-           adj_nd_plat_avg (float): deuterium average plateu dilution space adjusted for the subject weight change over
+           nd (dict): dictionary containing all the calculated values of the deuterium dilution space
+                plat_4hr_mol (float): calculated by the plateau method using the 4hr sample in mol
+                plat_5hr_mol (float): calculated by the plateau method using the 5hr sample in mol
+                plat_avg_mol (float): the average of the 4hr and 5hr plateau dilution spaces in mol
+                int_4hr_mol (float): calculated by the intercept method using the 4hr sample in mol
+                int_5hr_mol (float): calculated by the intercept method using the 5hr sample in mol
+                int_avg_mol (float): the average of the 4hr and 5hr intercept dilution spaces in mol
+                adj_plat_avg_mol (float): average plateau dilution space adjusted for the subject weight change over
                            the sampling period, in mol
-           adj_no_plat_avg (float): 18O average plateau dilution space adjusted for the subject weight change over the
-                           sampling period, in mol
-           adj_nd_plat_avg_kg (float): deuterium average plateu dilution space adjusted for the subject weight change
-                           over the sampling period, in kg
-           adj_no_plat_avg_kg (float): 18O average plateau dilution space adjusted for the subject weight change over
+                adj_int_avg_mol (float): average intercept dilution space adjusted for the subject weight change over
+                           the sampling period, in mol
+                adj_plat_avg_kg (float): average plateau dilution space adjusted for the subject weight change over
                            the sampling period, in kg
+                adj_int_avg_kg (float): average intercept dilution space adjusted for the subject weight change over
+                           the sampling period, in kg
+           no (dict): dictionary containing all the calculated values of the oxygen 18 dilution space
+                plat_4hr_mol (float): calculated by the plateau method using the 4hr sample in mol
+                plat_5hr_mol (float): calculated by the plateau method using the 5hr sample in mol
+                plat_avg_mol (float): the average of the 4hr and 5hr plateau dilution spaces in mol
+                int_4hr_mol (float): calculated by the intercept method using the 4hr sample in mol
+                int_5hr_mol (float): calculated by the intercept method using the 5hr sample in mol
+                int_avg_mol (float): the average of the 4hr and 5hr intercept dilution spaces in mol
+                adj_plat_avg_mol (float): average plateau dilution space adjusted for the subject weight change over
+                           the sampling period, in mol
+                adj_int_avg_mol (float): average intercept dilution space adjusted for the subject weight change over
+                           the sampling period, in mol
+                adj_plat_avg_kg (float): average plateau dilution space adjusted for the subject weight change over
+                           the sampling period, in kg
+                adj_int_avg_kg (float): average intercept dilution space adjusted for the subject weight change over
+                           the sampling period, in kg
+           dil_space_ratio (float): ratio of the 4 hr plateau deuterium and 18O dilution spaces
            total_body_water_d_kg (float): total body water calculated from the average D plateau dilution space, in kg
            total_body_water_o_kg (float): total body water calculated from the average 18O plateau dilution space, in kg
            total_body_water_ave_kg (float): average of total_body_water_d_kg and total_body_water_o_kg, in kg
@@ -122,56 +130,24 @@ class DLWSubject:
             self.ko_per_hr = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
             self.ko_kd_ratio = self.ko_per_hr / self.kd_per_hr
 
-            self.nd_plat_4hr_mol = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
-                                                               self.dose_enrichments[0], self.d_ratios[1],
-                                                               self.d_ratios[0])
-            self.no_plat_4hr_mol = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
-                                                               self.dose_enrichments[1], self.o18_ratios[1],
-                                                               self.o18_ratios[0])
+            self.nd = self.calculate_various_nd(self)
+            self.no = self.calculate_various_no(self)
 
-            self.nd_plat_5hr_mol = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
-                                                               self.dose_enrichments[0], self.d_ratios[2],
-                                                               self.d_ratios[0])
-            self.no_plat_5hr_mol = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
-                                                               self.dose_enrichments[1], self.o18_ratios[2],
-                                                               self.o18_ratios[0])
+            self.dil_space_ratio = self.nd['plat_4hr_mol'] / self.no['plat_4hr_mol']  # dilution space ratio err flag
 
-            self.nd_plat_avg_mol = (self.nd_plat_4hr_mol + self.nd_plat_5hr_mol) / 2
-            self.no_plat_avg_mol = (self.no_plat_4hr_mol + self.no_plat_5hr_mol) / 2
+            # self.rh2o = (self.nd['adj_plat_avg_kg'] * self.kd_per_hr * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
 
-            self.nd_int_avg = self.avg_intercept_dilution_space(self.dose_weights[0], self.mol_masses[0],
-                                                                self.dose_enrichments[0], self.kd_per_hr, self.d_ratios,
-                                                                self.sample_datetimes)
-            self.no_int_avg = self.avg_intercept_dilution_space(self.dose_weights[1], self.mol_masses[1],
-                                                                self.dose_enrichments[1], self.ko_per_hr,
-                                                                self.o18_ratios,
-                                                                self.sample_datetimes)
-
-            self.dil_space_ratio = self.nd_plat_4hr_mol / self.no_plat_4hr_mol  # dilution space ratio err flag
-
-            self.adj_nd_int_avg = self.adj_dilution_space(self.nd_int_avg, self.subject_weights)
-            self.adj_no_int_avg = self.adj_dilution_space(self.no_int_avg, self.subject_weights)
-
-            self.adj_nd_plat_avg = self.adj_dilution_space(self.nd_plat_avg_mol, self.subject_weights)
-            self.adj_no_plat_avg = self.adj_dilution_space(self.no_plat_avg_mol, self.subject_weights)
-
-            self.adj_nd_plat_avg_kg = self.adj_nd_plat_avg * STANDARD_WATER_MOL_MASS  # top line ndp kg
-            self.adj_no_plat_avg_kg = self.adj_no_plat_avg * STANDARD_WATER_MOL_MASS  # nop kg
-
-            # self.rh2o = (self.adj_nd_plat_avg_kg * self.kd_per_hr * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
-
-            self.total_body_water_d_kg = self.adj_nd_plat_avg_kg / POP_DIL_SPACE_D
-            self.total_body_water_o_kg = self.adj_no_plat_avg_kg / POP_DIL_SPACE_O
-            self.total_body_water_ave_kg = (
-                                                       self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
+            self.total_body_water_d_kg = self.nd['adj_plat_avg_kg'] / POP_DIL_SPACE_D
+            self.total_body_water_o_kg = self.no['adj_plat_avg_kg'] / POP_DIL_SPACE_O
+            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
 
             self.fat_free_mass_kg = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR
             self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg
             self.body_fat_percent = self.fat_mass_kg / self.subject_weights[0] * 100
 
-            self.schoeller_co2_int = self.calc_schoeller_co2(self.adj_nd_int_avg, self.adj_no_int_avg,
+            self.schoeller_co2_int = self.calc_schoeller_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
                                                              self.kd_per_hr, self.ko_per_hr)
-            self.schoeller_co2_plat = self.calc_schoeller_co2(self.adj_nd_plat_avg, self.adj_no_plat_avg,
+            self.schoeller_co2_plat = self.calc_schoeller_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
                                                               self.kd_per_hr, self.ko_per_hr)
 
             self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY  # rco2 mols/day
@@ -235,6 +211,64 @@ class DLWSubject:
         elapsedhours = (timedelta.total_seconds(sampledatetime[4] - sampledatetime[2])) / 3600
         turnovers[3] = self.isotope_turnover_2pt(ratios[0], ratios[2], ratios[4], elapsedhours)
         return np.mean(turnovers)
+
+    @staticmethod
+    def calculate_various_nd(self):
+        """Calculate the various dilution spaces for nd.
+            :return: dict of dilution spaces for deuterium"""
+
+        nd = {}
+        nd['plat_4hr_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
+                                                         self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0])
+        nd['plat_5hr_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
+                                                         self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
+        nd['plat_avg_mol'] = (nd['plat_4hr_mol'] + nd['plat_5hr_mol']) / 2
+
+        dosetime = timedelta.total_seconds(self.sample_datetimes[1] - self.sample_datetimes[0]) / 3600
+        nd['int_4hr_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
+                                                          self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0],
+                                                          self.kd_per_hr, dosetime)
+        dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[0]) / 3600
+        nd['int_5hr_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
+                                                          self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0],
+                                                          self.kd_per_hr, dosetime)
+        nd['int_avg_mol'] = (nd['int_4hr_mol'] + nd['int_5hr_mol']) / 2
+
+        nd['adj_plat_avg_mol'] = self.adj_dilution_space(nd['plat_avg_mol'], self.subject_weights)
+        nd['adj_int_avg_mol'] = self.adj_dilution_space(nd['int_avg_mol'], self.subject_weights)
+        nd['adj_plat_avg_kg'] = nd['adj_plat_avg_mol'] * STANDARD_WATER_MOL_MASS
+        nd['adj_int_avg_kg'] = nd['adj_int_avg_mol'] * STANDARD_WATER_MOL_MASS
+        return nd
+
+    @staticmethod
+    def calculate_various_no(self):
+        """Calculate the various dilution spaces for nd.
+            :return: dict of dilution spaces for deuterium"""
+
+        no = {}
+        no['plat_4hr_mol'] = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
+                                                         self.dose_enrichments[1], self.o18_ratios[1],
+                                                         self.o18_ratios[0])
+        no['plat_5hr_mol'] = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
+                                                         self.dose_enrichments[1], self.o18_ratios[2],
+                                                         self.o18_ratios[0])
+        no['plat_avg_mol'] = (no['plat_4hr_mol'] + no['plat_5hr_mol']) / 2
+
+        dosetime = timedelta.total_seconds(self.sample_datetimes[1] - self.sample_datetimes[0]) / 3600
+        no['int_4hr_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
+                                                          self.dose_enrichments[1], self.o18_ratios[1],
+                                                          self.o18_ratios[0], self.ko_per_hr, dosetime)
+        dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[0]) / 3600
+        no['int_5hr_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
+                                                          self.dose_enrichments[1], self.o18_ratios[2],
+                                                          self.o18_ratios[0], self.ko_per_hr, dosetime)
+        no['int_avg_mol'] = (no['int_4hr_mol'] + no['int_5hr_mol']) / 2
+
+        no['adj_plat_avg_mol'] = self.adj_dilution_space(no['plat_avg_mol'], self.subject_weights)
+        no['adj_int_avg_mol'] = self.adj_dilution_space(no['int_avg_mol'], self.subject_weights)
+        no['adj_plat_avg_kg'] = no['adj_plat_avg_mol'] * STANDARD_WATER_MOL_MASS
+        no['adj_int_avg_kg'] = no['adj_int_avg_mol'] * STANDARD_WATER_MOL_MASS
+        return no
 
     @staticmethod
     def dilution_space_plateau(doseweight, molmass, doseenrichment, plateauenrichment, background):
@@ -343,8 +377,8 @@ class DLWSubject:
         kd_5hr = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
         ko_5hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
 
-        schoeller_4hr = self.calc_schoeller_co2(self.nd_plat_4hr_mol, self.no_plat_4hr_mol, kd_4hr, ko_4hr)
-        schoeller_5hr = self.calc_schoeller_co2(self.nd_plat_5hr_mol, self.no_plat_5hr_mol, kd_5hr, ko_5hr)
+        schoeller_4hr = self.calc_schoeller_co2(self.nd['plat_4hr_mol'], self.no['plat_4hr_mol'], kd_4hr, ko_4hr)
+        schoeller_5hr = self.calc_schoeller_co2(self.nd['plat_5hr_mol'], self.no['plat_5hr_mol'], kd_5hr, ko_5hr)
 
         tee_4hr = self.co2_to_tee(schoeller_4hr)
         tee_5hr = self.co2_to_tee(schoeller_5hr)
