@@ -139,7 +139,8 @@ class DLWSubject:
 
             self.total_body_water_d_kg = self.nd['adj_plat_avg_kg'] / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.no['adj_plat_avg_kg'] / POP_DIL_SPACE_O
-            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
+            self.total_body_water_ave_kg = (
+                                                   self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
 
             self.fat_free_mass_kg = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR
             self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg
@@ -159,8 +160,8 @@ class DLWSubject:
             self.schoeller_tee_int_mj_day = self.schoeller_tee_int_kcal_day * MJ_PER_KCAL
             self.schoeller_tee_plat_mj_day = self.schoeller_tee_plat_kcal_day * MJ_PER_KCAL
 
-            self.d_ratio_percent = self.percent_difference(self.d_ratios[1],
-                                                           self.d_ratios[2])  # err flag 2 h plateau < 5%
+            self.d_ratio_percent = self.percent_difference(self.d_ratios[1]-self.d_ratios[0],
+                                                           self.d_ratios[2]-self.d_ratios[0])  # err flag 2 h plateau < 5%
             self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1],
                                                              self.o18_ratios[2])  # err flag o18 plateau
             self.ee_check = self.ee_consistency_check()  # err flag # 4 pd4
@@ -363,7 +364,7 @@ class DLWSubject:
     @staticmethod
     def percent_difference(first, second):
         """Calculate the percent difference between two values """
-        return (abs(first - second) / second * 100)
+        return ((first - second) / ((first+second)/2) * 100)
 
     def ee_consistency_check(self):
         """Calculate the percentage difference between the energy expenditure measured using the PD4/ED4 pair and
@@ -377,8 +378,8 @@ class DLWSubject:
         kd_5hr = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
         ko_5hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
 
-        schoeller_4hr = self.calc_schoeller_co2(self.nd['plat_4hr_mol'], self.no['plat_4hr_mol'], kd_4hr, ko_4hr)
-        schoeller_5hr = self.calc_schoeller_co2(self.nd['plat_5hr_mol'], self.no['plat_5hr_mol'], kd_5hr, ko_5hr)
+        schoeller_4hr = self.calc_schoeller_co2(self.nd['int_4hr_mol'], self.no['int_4hr_mol'], kd_4hr, ko_4hr)
+        schoeller_5hr = self.calc_schoeller_co2(self.nd['int_5hr_mol'], self.no['int_5hr_mol'], kd_5hr, ko_5hr)
 
         tee_4hr = self.co2_to_tee(schoeller_4hr)
         tee_5hr = self.co2_to_tee(schoeller_5hr)
