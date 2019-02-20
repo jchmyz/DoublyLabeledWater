@@ -139,8 +139,7 @@ class DLWSubject:
 
             self.total_body_water_d_kg = self.nd['adj_plat_avg_kg'] / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.no['adj_plat_avg_kg'] / POP_DIL_SPACE_O
-            self.total_body_water_ave_kg = (
-                                                   self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
+            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
 
             self.fat_free_mass_kg = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR
             self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg

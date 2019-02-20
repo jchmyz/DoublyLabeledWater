@@ -44,10 +44,10 @@ class TestDLWSubject(TestCase):
         self.assertAlmostEqual(43.68969255, test_subject.fat_free_mass_kg)
         self.assertAlmostEqual(15.93030745, test_subject.fat_mass_kg)
         self.assertAlmostEqual(26.7197374, test_subject.body_fat_percent)
-        self.assertAlmostEqual(13.03134603, test_subject.schoeller_co2_int_mol_day)
-        self.assertAlmostEqual(12.17019124, test_subject.schoeller_co2_int_L_day)
-        self.assertAlmostEqual(7.017805448, test_subject.schoeller_tee_int_mj_day)
-        self.assertAlmostEqual(7.219921161, test_subject.schoeller_tee_plat_mj_day)
+        self.assertAlmostEqual(13.03292332, test_subject.schoeller_co2_int_mol_day)
+        self.assertAlmostEqual(12.1716643, test_subject.schoeller_co2_int_L_day)
+        self.assertAlmostEqual(7.018654871, test_subject.schoeller_tee_int_mj_day)
+        self.assertAlmostEqual(7.220795047, test_subject.schoeller_tee_plat_mj_day)
 
     def test_d_deltas_to_ratios(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
@@ -102,17 +102,17 @@ class TestDLWSubject(TestCase):
     def test_calc_schoeller_co2(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(0.558610592, test_subject.schoeller_co2_plat)
+        self.assertAlmostEqual(0.558678205, test_subject.schoeller_co2_plat)
 
     def test_co2_to_tee(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(1725.602572, test_subject.schoeller_tee_plat_kcal_day)
+        self.assertAlmostEqual(1725.811435612413, test_subject.schoeller_tee_plat_kcal_day)
 
     def test_percent_difference(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(-1.8, test_subject.d_ratio_percent)
+        self.assertAlmostEqual(-1.8195460185388, test_subject.d_ratio_percent)
 
     def test_ee_consistency_check(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
