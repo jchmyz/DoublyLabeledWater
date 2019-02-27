@@ -31,7 +31,7 @@ class DLWSubject:
            sample_datetimes ([datetime]): dates and times of sample collections
            dose_weights ([float]): weights in g of doses administered, deuterium first, 18O second
            mol_masses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
-           dose_enrichments ([float]): dose enrichments in ppm of doses administered, deuterium first, 18O second
+           dose_enrichments ([float]): dose enrichments in ratio of doses administered, deuterium first, 18O second
            subject_weights ([float]): initial and final weights of the subject in kg
            d_ratios (np.array): deuterium ratios of subject samples
            o18_ratios (np.array): 18O ratios of subject samples
@@ -120,7 +120,7 @@ class DLWSubject:
             self.sample_datetimes = sample_datetimes
             self.dose_weights = dose_weights
             self.mol_masses = mol_masses
-            self.dose_enrichments = dose_enrichments
+            self.dose_enrichments = np.array(dose_enrichments)/1000000   #convert from ppm to ratio
             self.subject_weights = subject_weights
 
             self.d_ratios = self.d_deltas_to_ratios()
