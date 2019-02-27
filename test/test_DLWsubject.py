@@ -117,4 +117,4 @@ class TestDLWSubject(TestCase):
     def test_ee_consistency_check(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
-        self.assertAlmostEqual(2.5, test_subject.ee_check)
+        self.assertAlmostEqual(-1.03568160189, test_subject.ee_check)
