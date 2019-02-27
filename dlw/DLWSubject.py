@@ -33,6 +33,7 @@ class DLWSubject:
            mol_masses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
            dose_enrichments ([float]): dose enrichments in ratio of doses administered, deuterium first, 18O second
            subject_weights ([float]): initial and final weights of the subject in kg
+           subject_id ([string]): string identifier for the data
            d_ratios (np.array): deuterium ratios of subject samples
            o18_ratios (np.array): 18O ratios of subject samples
            kd_per_hr (float): deuterium turnover rate in 1/hr
@@ -103,7 +104,7 @@ class DLWSubject:
     """
 
     def __init__(self, d_deltas, o_18deltas, sample_datetimes, dose_weights, mol_masses, dose_enrichments,
-                 subject_weights):
+                 subject_weights, subject_id):
         """Constructor for the DLWSubject class
            :param d_deltas (np.array): deuterium delta values of subject samples
            :param o_18deltas (np.array): oxygen 18 delta values of subject samples
@@ -112,6 +113,7 @@ class DLWSubject:
            :param mol_masses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
            :param dose_enrichments ([float]): dose enrichments in ppm of doses administered, deuterium first, 18O second
            :param subject_weights ([float]): initial and final weights of the subject in kg
+           :param subject_id ([string]): string identifier for the data
         """
         if len(d_deltas) == len(o_18deltas) == len(sample_datetimes) == 5:
             # how to test that dates are in order?
@@ -122,6 +124,7 @@ class DLWSubject:
             self.mol_masses = mol_masses
             self.dose_enrichments = np.array(dose_enrichments)/1000000   #convert from ppm to ratio
             self.subject_weights = subject_weights
+            self.subject_id = subject_id
 
             self.d_ratios = self.d_deltas_to_ratios()
             self.o18_ratios = self.o18_deltas_to_ratios()
@@ -389,8 +392,8 @@ class DLWSubject:
     def save_results_csv(self, filename):
         """ Save the results to a csv file
             :param: filename(string), the name of the file to which to save"""
-        write_header = 'rCO2_mol/day,rCO2_L/day,EE_kcal/day,EE_MJ/day'
+        write_header = 'subject_id,rCO2_mol/day,rCO2_L/day,EE_kcal/day,EE_MJ/day'
         write_data = np.asarray(
-            [[self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int_kcal_day,
-              self.schoeller_tee_int_mj_day]])
-        np.savetxt(filename, write_data, delimiter=',', header=write_header, comments='')
+            [[self.subject_id, self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day,
+              self.schoeller_tee_int_kcal_day, self.schoeller_tee_int_mj_day]])
+        np.savetxt(filename, write_data, delimiter=',', header=write_header, comments='', fmt="%s")

@@ -17,6 +17,7 @@ DOSE_WEIGHTS_TEST = [4.957, 8.649]
 MOL_MASSES_TEST = [19.9960, 19.9000]
 DOSE_ENRICHMENTS_TEST = [998000, 950000]
 SUBJECT_WEIGHTS_TEST = [59.62, 58.82]
+SUBJECT_ID_TEST = "TestSubject"
 
 INCORRECT_RATIOS_TEST = np.array([-62.281, 742.928, 243.613, 739.377, 242.038])
 INCORRECT_SIZE_TEST = np.array([-62.281, 742.928, 243.613, 739.377])
@@ -30,12 +31,12 @@ class TestDLWSubject(TestCase):
     def test_incorrect_sizes(self):
         with self.assertRaises(ValueError) as context:
             dlw.DLWSubject(INCORRECT_SIZE_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                           MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                           MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
             self.assertTrue('Arrays not correct size' in context.exception)
 
     def test_DLWsubject_inline_calcs(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(1.146923975, test_subject.ko_kd_ratio)
         self.assertAlmostEqual(1.04230402, test_subject.dil_space_ratio)
         self.assertAlmostEqual(32.03045527, test_subject.total_body_water_d_kg)
@@ -51,29 +52,29 @@ class TestDLWSubject(TestCase):
 
     def test_d_deltas_to_ratios(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertTrue(np.allclose(D_RATIOS_TEST, test_subject.d_ratios))
 
     def test_o18_deltas_to_ratios(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertTrue(np.allclose(O18_RATIOS_TEST, test_subject.o18_ratios))
 
     def test_average_turnover_2pt(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(0.00588674101, test_subject.kd_per_hr)
 
     def test_incorrect_ratios(self):
         with self.assertRaises(ValueError) as context:
             dlw.DLWSubject(INCORRECT_RATIOS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                           MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                           MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
             self.assertTrue(
                 'Isotope ratios do not conform to pattern background < final < plateau' in context.exception)
 
     def test_calculate_various_nd(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(1871.40228081, test_subject.nd['plat_4hr_mol'])
         self.assertAlmostEqual(1837.65377923, test_subject.nd['plat_5hr_mol'])
         self.assertAlmostEqual(1854.52803002, test_subject.nd['plat_avg_mol'])
@@ -87,7 +88,7 @@ class TestDLWSubject(TestCase):
 
     def test_calculate_various_no(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(1795.44762535, test_subject.no['plat_4hr_mol'])
         self.assertAlmostEqual(1761.77954996, test_subject.no['plat_5hr_mol'])
         self.assertAlmostEqual(1778.61358765, test_subject.no['plat_avg_mol'])
@@ -101,20 +102,29 @@ class TestDLWSubject(TestCase):
 
     def test_calc_schoeller_co2(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(0.558678205, test_subject.schoeller_co2_plat)
 
     def test_co2_to_tee(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(1725.811435612413, test_subject.schoeller_tee_plat_kcal_day)
 
     def test_percent_difference(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(-1.8195460185388, test_subject.d_ratio_percent)
 
     def test_ee_consistency_check(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST)
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(-1.03568160189, test_subject.ee_check)
+
+    def test_save_results_csv(self):
+        test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
+        test_subject.save_results_csv("/Users/elena/personal/DLW/test.csv")
+        read_data = np.genfromtxt("/Users/elena/personal/DLW/test.csv", delimiter=',', skip_header=1, dtype=str)
+        self.assertEqual('TestSubject', read_data[0])
+        self.assertAlmostEqual(test_subject.schoeller_co2_int_mol_day, float(read_data[1]))
+        self.assertAlmostEqual(test_subject.schoeller_co2_int_L_day, float(read_data[2]))
