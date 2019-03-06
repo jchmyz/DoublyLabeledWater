@@ -1,5 +1,6 @@
 import numpy as np
 from datetime import timedelta
+import os.path
 
 DEUTERIUM = "deuterium"
 OXYGEN = "oxygen"
@@ -396,4 +397,10 @@ class DLWSubject:
         write_data = np.asarray(
             [[self.subject_id, self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day,
               self.schoeller_tee_int_kcal_day, self.schoeller_tee_int_mj_day]])
-        np.savetxt(filename, write_data, delimiter=',', header=write_header, comments='', fmt="%s")
+        if os.path.isfile(filename):    #if the file already exists, don't rewrite the header
+            file = open(filename, 'a+')
+            np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")
+        else:
+            file = open(filename, 'a+')
+            np.savetxt(file, write_data, delimiter=',', header=write_header, comments='', fmt="%s")
+        file.close()

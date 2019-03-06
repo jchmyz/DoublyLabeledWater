@@ -2,6 +2,7 @@ from unittest import TestCase
 import numpy as np
 import datetime
 import dlw
+import os
 
 D_DELTAS_TEST = np.array([-76.416, 772.106, 787.687, 242.117, 242.141])
 O18_DELTAS_TEST = np.array([-7.984, 106.433, 108.619, 29.245, 29.104])
@@ -123,8 +124,11 @@ class TestDLWSubject(TestCase):
     def test_save_results_csv(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MOL_MASSES_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
-        test_subject.save_results_csv("/Users/elena/personal/DLW/test.csv")
-        read_data = np.genfromtxt("/Users/elena/personal/DLW/test.csv", delimiter=',', skip_header=1, dtype=str)
+        test_path = "/Users/elena/personal/DLW/test.csv"
+        test_subject.save_results_csv(test_path)
+        read_data = np.genfromtxt(test_path, delimiter=',', skip_header=1, dtype=str)
         self.assertEqual('TestSubject', read_data[0])
         self.assertAlmostEqual(test_subject.schoeller_co2_int_mol_day, float(read_data[1]))
         self.assertAlmostEqual(test_subject.schoeller_co2_int_L_day, float(read_data[2]))
+        os.remove(test_path)
+
