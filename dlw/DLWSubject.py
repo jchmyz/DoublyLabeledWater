@@ -31,6 +31,7 @@ class DLWSubject:
            o_18deltas (np.array): oxygen 18 delta values of subject samples
            sample_datetimes ([datetime]): dates and times of sample collections
            dose_weights ([float]): weights in g of doses administered, deuterium first, 18O second
+           mixed_dose ([bool]): boolean indicating whether doses are mixed together or separate
            mol_masses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
            dose_enrichments ([float]): dose enrichments in ratio of doses administered, deuterium first, 18O second
            subject_weights ([float]): initial and final weights of the subject in kg
@@ -83,7 +84,7 @@ class DLWSubject:
                               as updated in 1988) using the weight adjusted, average, plateu dilution spaces
            schoeller_co2_int_mol_day (float): CO2 production rate in mol/day using the equation of Schoeller (equation
                             A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
-           schoeller_co2_int_L_day (float): CO2 production rate in L/day using the equation of Schoeller (equation
+           schoeller_co2_int_L_hr (float): CO2 production rate in L/day using the equation of Schoeller (equation
                             A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
            schoeller_tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
                             values calculated via Schoeller and the weight adjusted, average, intercept dilution spaces,
@@ -104,14 +105,14 @@ class DLWSubject:
                             the plateau method.
     """
 
-    def __init__(self, d_deltas, o_18deltas, sample_datetimes, dose_weights, mol_masses, dose_enrichments,
+    def __init__(self, d_deltas, o_18deltas, sample_datetimes, dose_weights, mixed_dose, dose_enrichments,
                  subject_weights, subject_id):
         """Constructor for the DLWSubject class
            :param d_deltas (np.array): deuterium delta values of subject samples
            :param o_18deltas (np.array): oxygen 18 delta values of subject samples
            :param sample_datetimes ([datetime]): dates and times of sample collections
            :param dose_weights ([float]): weights in g of doses administered, deuterium first, 18O second
-           :param mol_masses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
+           :param mixed_dose ([bool]): boolean indicating whether doses are mixed together or separate
            :param dose_enrichments ([float]): dose enrichments in ppm of doses administered, deuterium first, 18O second
            :param subject_weights ([float]): initial and final weights of the subject in kg
            :param subject_id ([string]): string identifier for the data
@@ -122,8 +123,8 @@ class DLWSubject:
             self.o18_deltas = o_18deltas
             self.sample_datetimes = sample_datetimes
             self.dose_weights = dose_weights
-            self.mol_masses = mol_masses
-            self.dose_enrichments = np.array(dose_enrichments)/1000000   #convert from ppm to ratio
+            self.mixed_dose = mixed_dose
+            self.dose_enrichments = np.array(dose_enrichments) / 1000000  # convert from ppm to ratio
             self.subject_weights = subject_weights
             self.subject_id = subject_id
 
@@ -133,6 +134,8 @@ class DLWSubject:
             self.kd_per_hr = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
             self.ko_per_hr = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
             self.ko_kd_ratio = self.ko_per_hr / self.kd_per_hr
+
+            self.mol_masses = self.calculate_mol_masses(self.dose_enrichments, self.mixed_dose)
 
             self.nd = self.calculate_various_nd(self)
             self.no = self.calculate_various_no(self)
@@ -155,7 +158,7 @@ class DLWSubject:
                                                               self.kd_per_hr, self.ko_per_hr)
 
             self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY  # rco2 mols/day
-            self.schoeller_co2_int_L_day = self.schoeller_co2_int * LITERS_PER_MOL  # r2co2 l/day
+            self.schoeller_co2_int_L_hr = self.schoeller_co2_int * LITERS_PER_MOL  # r2co2 l/day
 
             self.schoeller_tee_int_kcal_day = self.co2_to_tee(self.schoeller_co2_int)
             self.schoeller_tee_plat_kcal_day = self.co2_to_tee(self.schoeller_co2_plat)
@@ -215,6 +218,27 @@ class DLWSubject:
         elapsedhours = (timedelta.total_seconds(sampledatetime[4] - sampledatetime[2])) / 3600
         turnovers[3] = self.isotope_turnover_2pt(ratios[0], ratios[2], ratios[4], elapsedhours)
         return np.mean(turnovers)
+
+    @staticmethod
+    def calculate_mol_masses(dose_enrichments, mixed_dose):
+        """ Calculate the molecular masses for the enriched dose waters
+            :param: dose_enrichments ([float]):dose enrichments in ppm of doses administered, 2H first, 18O second
+            :param: mixed_dose ([bool]): boolean indicating whether doses are mixed together or separate
+            :return: array of floats of molecular masses, 2H first, 18O second.  Both numbers will be the same in
+                        the case of a mixed dose"""
+
+        if mixed_dose:
+            mol_mass = 2 * ((1 - dose_enrichments[0]) * 1 + dose_enrichments[0] * 2) + (
+                        (1 - dose_enrichments[1]) * 16 + dose_enrichments[1] * 18)
+            mol_masses = [mol_mass, mol_mass]
+        else:
+            mol_mass_d = 2 * ((1 - dose_enrichments[0]) * 1 + dose_enrichments[0] * 2) + (
+                        (1 - O18_VSMOW_RATIO) * 16 + O18_VSMOW_RATIO * 18)
+            mol_mass_o = 2 * ((1 - D_VSMOW_RATIO) * 1 + D_VSMOW_RATIO * 2) + (
+                        (1 - dose_enrichments[1]) * 16 + dose_enrichments[1] * 18)
+            mol_masses = [mol_mass_d, mol_mass_o]
+
+        return mol_masses
 
     @staticmethod
     def calculate_various_nd(self):
@@ -367,7 +391,7 @@ class DLWSubject:
     @staticmethod
     def percent_difference(first, second):
         """Calculate the percent difference between two values """
-        return ((first - second) / ((first+second)/2) * 100)
+        return ((first - second) / ((first + second) / 2) * 100)
 
     def ee_consistency_check(self):
         """Calculate the percentage difference between the energy expenditure measured using the PD4/ED4 pair and
@@ -395,9 +419,9 @@ class DLWSubject:
             :param: filename(string), the name of the file to which to save"""
         write_header = 'subject_id,rCO2_mol/day,rCO2_L/day,EE_kcal/day,EE_MJ/day'
         write_data = np.asarray(
-            [[self.subject_id, self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day,
+            [[self.subject_id, self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_hr,
               self.schoeller_tee_int_kcal_day, self.schoeller_tee_int_mj_day]])
-        if os.path.isfile(filename):    #if the file already exists, don't rewrite the header
+        if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
             file = open(filename, 'a+')
             np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")
         else:

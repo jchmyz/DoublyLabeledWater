@@ -44,7 +44,7 @@ def calculate_from_inputs():
         },
         "rco2_ee": {
             "rCO2 (mol/day)": round(dlw_results.schoeller_co2_int_mol_day, 2),
-            "rCO2 (L/day)": round(dlw_results.schoeller_co2_int_L_day, 2),
+            "rCO2 (L/day)": round(dlw_results.schoeller_co2_int_L_hr, 2),
             "EE (kcal/day)": round(dlw_results.schoeller_tee_int_kcal_day, 2),
             "EE (MJ/day)": round(dlw_results.schoeller_tee_int_mj_day, 2)
         },
