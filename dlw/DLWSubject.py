@@ -84,7 +84,7 @@ class DLWSubject:
                               as updated in 1988) using the weight adjusted, average, plateu dilution spaces
            schoeller_co2_int_mol_day (float): CO2 production rate in mol/day using the equation of Schoeller (equation
                             A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
-           schoeller_co2_int_L_hr (float): CO2 production rate in L/day using the equation of Schoeller (equation
+           schoeller_co2_int_L_hr (float): CO2 production rate in L/hr using the equation of Schoeller (equation
                             A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
            schoeller_tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
                             values calculated via Schoeller and the weight adjusted, average, intercept dilution spaces,
@@ -146,7 +146,8 @@ class DLWSubject:
 
             self.total_body_water_d_kg = self.nd['adj_plat_avg_kg'] / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.no['adj_plat_avg_kg'] / POP_DIL_SPACE_O
-            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2  # average total body water
+            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2
+            # average total body water
 
             self.fat_free_mass_kg = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR
             self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg
@@ -166,8 +167,9 @@ class DLWSubject:
             self.schoeller_tee_int_mj_day = self.schoeller_tee_int_kcal_day * MJ_PER_KCAL
             self.schoeller_tee_plat_mj_day = self.schoeller_tee_plat_kcal_day * MJ_PER_KCAL
 
-            self.d_ratio_percent = self.percent_difference(self.d_ratios[1]-self.d_ratios[0],
-                                                           self.d_ratios[2]-self.d_ratios[0])  # err flag 2 h plateau < 5%
+            self.d_ratio_percent = self.percent_difference(self.d_ratios[1] - self.d_ratios[0],
+                                                           self.d_ratios[2] - self.d_ratios[0])
+            # err flag 2 h plateau < 5%
             self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1],
                                                              self.o18_ratios[2])  # err flag o18 plateau
             self.ee_check = self.ee_consistency_check()  # err flag # 4 pd4
@@ -229,13 +231,13 @@ class DLWSubject:
 
         if mixed_dose:
             mol_mass = 2 * ((1 - dose_enrichments[0]) * 1 + dose_enrichments[0] * 2) + (
-                        (1 - dose_enrichments[1]) * 16 + dose_enrichments[1] * 18)
+                    (1 - dose_enrichments[1]) * 16 + dose_enrichments[1] * 18)
             mol_masses = [mol_mass, mol_mass]
         else:
             mol_mass_d = 2 * ((1 - dose_enrichments[0]) * 1 + dose_enrichments[0] * 2) + (
-                        (1 - O18_VSMOW_RATIO) * 16 + O18_VSMOW_RATIO * 18)
+                    (1 - O18_VSMOW_RATIO) * 16 + O18_VSMOW_RATIO * 18)
             mol_mass_o = 2 * ((1 - D_VSMOW_RATIO) * 1 + D_VSMOW_RATIO * 2) + (
-                        (1 - dose_enrichments[1]) * 16 + dose_enrichments[1] * 18)
+                    (1 - dose_enrichments[1]) * 16 + dose_enrichments[1] * 18)
             mol_masses = [mol_mass_d, mol_mass_o]
 
         return mol_masses
