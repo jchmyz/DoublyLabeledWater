@@ -33,27 +33,27 @@ def calculate_from_inputs():
 
     return json.dumps({
         "calculations": {
-            "NdP (kg)": round(dlw_results.adj_nd_plat_avg_kg, 2),
+            "NdP (kg)": round(dlw_results.adj_nd_plat_avg_kg, 3),
             "kd/hour": round(dlw_results.kd, 3),
-            "NoP (kg)": round(dlw_results.adj_no_plat_avg_kg, 2),
+            "NoP (kg)": round(dlw_results.adj_no_plat_avg_kg, 3),
             "ko/hour": round(dlw_results.ko, 3),
-            "Total Body Weight Average (kg)": round(dlw_results.total_body_water_ave_kg, 2),
-            "Fat Free Mass (kg)": round(dlw_results.fat_free_mass, 2),
-            "Fat Mass (kg)": round(dlw_results.fat_free_mass, 2),
-            "Body Fat Percentage": round(dlw_results.body_fat_percent, 2)
+            "Total Body Water Average (kg)": round(dlw_results.total_body_water_ave_kg, 3),
+            "Fat Free Mass (kg)": round(dlw_results.fat_free_mass, 3),
+            "Fat Mass (kg)": round(dlw_results.fat_free_mass, 3),
+            "Body Fat Percentage": round(dlw_results.body_fat_percent, 3)
         },
         "rco2_ee": {
-            "rCO2 (mol/day)": round(dlw_results.schoeller_co2_int_mol_day, 2),
-            "rCO2 (L/day)": round(dlw_results.schoeller_co2_int_L_day, 2),
-            "EE (kcal/day)": round(dlw_results.schoeller_tee_int, 2),
-            "EE (MJ/day)": round(dlw_results.schoeller_tee_int_mj_day, 2)
+            "rCO2 (mol/day)": round(dlw_results.schoeller_co2_int_mol_day, 3),
+            "rCO2 (L/day)": round(dlw_results.schoeller_co2_int_L_day, 3),
+            "EE (kcal/day)": round(dlw_results.schoeller_tee_int, 3),
+            "EE (MJ/day)": round(dlw_results.schoeller_tee_int_mj_day, 3)
         },
         "error_flags": {
-            "2H plateau (<5%)": round(dlw_results.d_ratio_percent, 2),
-            "18O Plateau (<5%)": round(dlw_results.o18_ratio_percent, 2),
-            "DS ratio (1.000 - 1.070)": round(dlw_results.dil_space_ratio, 2),
-            "EE (PD4-ED4 vs. PD5-ED5, <10%)": round(dlw_results.ee_check, 2),
-            "Ko/kd (1.1 - 1.7)": round(dlw_results.ko_kd_ratio, 2)
+            "2H plateau (<5%)": round(dlw_results.d_ratio_percent, 3),
+            "18O Plateau (<5%)": round(dlw_results.o18_ratio_percent, 3),
+            "DS ratio (1.000 - 1.070)": round(dlw_results.dil_space_ratio, 3),
+            "EE (PD4-ED4 vs. PD5-ED5, <10%)": round(dlw_results.ee_check, 3),
+            "Ko/kd (1.1 - 1.7)": round(dlw_results.ko_kd_ratio, 3)
         }
     })
 

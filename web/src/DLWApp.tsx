@@ -1,6 +1,6 @@
 import * as React from "react";
 import {
-    ButtonGroup,
+    ButtonGroup, Popover,
     FormGroup,
     NumericInput,
     Button,
@@ -50,6 +50,7 @@ interface DLWState {
     mol_masses_validated: boolean,
     dose_enrichments_validated: boolean,
     subject_weights_validated: boolean,
+    dates_chronological: boolean[]
 
     results: ResultTypes
     csv_name: string,
@@ -74,6 +75,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             mol_masses_validated: false,
             dose_enrichments_validated: false,
             subject_weights_validated: false,
+            dates_chronological: [true, true, true, true, true],
 
             results: {calculations: [], rco2_ee: [], error_flags: []},
             csv_name: "",
@@ -101,12 +103,15 @@ export class DLWApp extends React.Component<any, DLWState> {
                 <NumberInput placeholder={SAMPLE_LABELS[i] + ' Oxygen 18 delta'} index={i} key={i} unit={"permil"}
                              change_function={this.handle_oxygen_delta_change} value={this.state.oxygen_deltas[i]}/>);
             collection_time_inputs.push(
-                <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
-                                inputProps={{
-                                    className: 'date-input-box .bp3-input',
-                                    placeholder: ' ' + SAMPLE_LABELS[i] + ' sample date and time'
-                                }}
-                                key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
+                <Popover content={<p>Collection time inputs must be in chronological order.</p>}
+                         className='date-warning-popover' isOpen={!this.state.dates_chronological[i]}>
+                    <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
+                                    inputProps={{
+                                        className: 'date-input-box .bp3-input',
+                                        placeholder: ' ' + SAMPLE_LABELS[i] + ' sample date and time'
+                                    }}
+                                    key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
+                </Popover>
             );
         }
 
@@ -180,8 +185,9 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <Navbar.Heading className='dlw-title'>Doubly Labeled Water</Navbar.Heading>
                 </NavbarGroup>
                 <NavbarGroup align={Alignment.RIGHT}>
-                    <NavbarHeading className='tagline'>an open source project by the University of Colorado School of
-                        Medicine</NavbarHeading>
+                    <NavbarHeading className='tagline'>an open source project</NavbarHeading>
+                    <img src="assets/logo_cuhs.png" alt="University of Colorado Anschutz Medical Campus logo"
+                         style={{'height': 30}}/>
                     <NavbarDivider/>
                     <a href="https://github.com/jchmyz/DoublyLabeledWater" target="_blank">DoublyLabeledWater on
                         GitHub</a>
@@ -321,16 +327,31 @@ export class DLWApp extends React.Component<any, DLWState> {
 
     handle_date_change = (i: number, value: string | Moment) => {
         if (typeof value != "string") {
-            let new_date_array = this.state.datetimes;
-            new_date_array.splice(i, 1, value);
             let all_dates_filled = true;
+            let new_date_array = this.state.datetimes;
+            let dates_chronological = this.state.dates_chronological;
+            dates_chronological.splice(i, 1, true);
+            for (let j = 0; j < i; j++) {
+                if (typeof(new_date_array[j]) != "string") {
+                    if (value.isBefore(new_date_array[j])) {
+                        dates_chronological.splice(i, 1, false);
+                        all_dates_filled = false;
+                        break;
+                    }
+                }
+            }
+            new_date_array.splice(i, 1, value);
             for (let date of new_date_array) {
                 if (typeof date === "string") {
                     all_dates_filled = false;
                     break;
                 }
             }
-            this.setState({datetimes: new_date_array, datetimes_validated: all_dates_filled})
+            this.setState({
+                              datetimes: new_date_array,
+                              datetimes_validated: all_dates_filled,
+                              dates_chronological: dates_chronological
+                          })
         }
     };
 
