@@ -7,6 +7,9 @@ import tempfile
 
 D_DELTAS_TEST = np.array([-76.416, 772.106, 787.687, 242.117, 242.141])
 O18_DELTAS_TEST = np.array([-7.984, 106.433, 108.619, 29.245, 29.104])
+D_PPM_TEST = np.array([143.857444, 276.023231, 278.450127, 193.472144, 193.475882])
+O18_PPM_TEST = np.array([1989.190483, 2218.619452, 2223.002819, 2063.842074, 2063.559341])
+
 D_RATIOS_TEST = np.array([0.000143857, 0.000276023, 0.000278450, 0.000193472, 0.000193476])
 O18_RATIOS_TEST = np.array([0.001989190, 0.002218619, 0.002223003, 0.002063842, 0.002063559])
 DOSE_TEST = datetime.datetime(2014, 2, 24, 7, 00)  # year, month, day, hours, minutes
@@ -62,6 +65,18 @@ class TestDLWSubject(TestCase):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertTrue(np.allclose(O18_RATIOS_TEST, test_subject.o18_ratios))
+
+    def test_d_ratios_to_deltas(self):
+        test_subject = dlw.DLWSubject(D_PPM_TEST, O18_PPM_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST, False)
+        print (D_DELTAS_TEST, test_subject.d_deltas)
+        self.assertTrue(np.allclose(D_DELTAS_TEST, test_subject.d_deltas))
+
+    def test_o18_ratios_to_deltas(self):
+        test_subject = dlw.DLWSubject(D_PPM_TEST, O18_PPM_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST, False)
+        print(O18_DELTAS_TEST, test_subject.o18_deltas)
+        self.assertTrue(np.allclose(O18_DELTAS_TEST, test_subject.o18_deltas))
 
     def test_average_turnover_2pt(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,

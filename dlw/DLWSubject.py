@@ -8,6 +8,7 @@ OXYGEN = "oxygen"
 D_VSMOW_RATIO = 0.00015576
 O18_VSMOW_RATIO = 0.0020052
 STANDARD_WATER_MOL_MASS = 18.10106 / 1000  # kg
+PPM_TO_RATIO = 1/1000000
 POP_DIL_SPACE_D = 1.041
 POP_DIL_SPACE_O = 1.007
 FAT_FREE_MASS_FACTOR = 0.73
@@ -27,8 +28,10 @@ KO_KD_RATIO_HIGH_LIMIT = 1.7
 class DLWSubject:
     """Class for performing Doubly Labeled Water calculations
        Attributes:
+           d_meas (np.array): deuterium values as measured (can be in permil or ppm)
+           o18_meas (np.array): oxygen 18 values as measured (can be in permil or ppm)
            d_deltas (np.array): deuterium delta values of subject samples
-           o_18deltas (np.array): oxygen 18 delta values of subject samples
+           o18_deltas (np.array): oxygen 18 delta values of subject samples
            sample_datetimes ([datetime]): dates and times of sample collections
            dose_weights ([float]): weights in g of doses administered, deuterium first, 18O second
            mixed_dose ([bool]): boolean indicating whether doses are mixed together or separate
@@ -36,6 +39,7 @@ class DLWSubject:
            dose_enrichments ([float]): dose enrichments in ratio of doses administered, deuterium first, 18O second
            subject_weights ([float]): initial and final weights of the subject in kg
            subject_id ([string]): string identifier for the data
+           in_permil ([bool]): True if measured d and O18 are in permil, false if they are in ppm
            d_ratios (np.array): deuterium ratios of subject samples
            o18_ratios (np.array): 18O ratios of subject samples
            kd_per_hr (float): deuterium turnover rate in 1/hr
@@ -105,22 +109,22 @@ class DLWSubject:
                             the plateau method.
     """
 
-    def __init__(self, d_deltas, o_18deltas, sample_datetimes, dose_weights, mixed_dose, dose_enrichments,
-                 subject_weights, subject_id):
+    def __init__(self, d_meas, o18_meas, sample_datetimes, dose_weights, mixed_dose, dose_enrichments,
+                 subject_weights, subject_id, in_permil=True):
         """Constructor for the DLWSubject class
-           :param d_deltas (np.array): deuterium delta values of subject samples
-           :param o_18deltas (np.array): oxygen 18 delta values of subject samples
+           :param d_meas (np.array): deuterium delta values of subject samples
+           :param o18_meas (np.array): oxygen 18 delta values of subject samples
            :param sample_datetimes ([datetime]): dates and times of sample collections
            :param dose_weights ([float]): weights in g of doses administered, deuterium first, 18O second
            :param mixed_dose ([bool]): boolean indicating whether doses are mixed together or separate
            :param dose_enrichments ([float]): dose enrichments in ppm of doses administered, deuterium first, 18O second
            :param subject_weights ([float]): initial and final weights of the subject in kg
            :param subject_id ([string]): string identifier for the data
+           :param in_permil ([bool]): True if measured d and O18 are in permil, false if they are in ppm
         """
-        if len(d_deltas) == len(o_18deltas) == len(sample_datetimes) == 5:
+        if len(d_meas) == len(o18_meas) == len(sample_datetimes) == 5:
             # how to test that dates are in order?
-            self.d_deltas = d_deltas
-            self.o18_deltas = o_18deltas
+
             self.sample_datetimes = sample_datetimes
             self.dose_weights = dose_weights
             self.mixed_dose = mixed_dose
@@ -128,8 +132,16 @@ class DLWSubject:
             self.subject_weights = subject_weights
             self.subject_id = subject_id
 
-            self.d_ratios = self.d_deltas_to_ratios()
-            self.o18_ratios = self.o18_deltas_to_ratios()
+            if(in_permil):
+                self.d_deltas = d_meas
+                self.o18_deltas = o18_meas
+                self.d_ratios = self.d_deltas_to_ratios()
+                self.o18_ratios = self.o18_deltas_to_ratios()
+            else:
+                self.d_ratios = d_meas * PPM_TO_RATIO
+                self.o18_ratios = o18_meas * PPM_TO_RATIO
+                self.d_deltas = self.d_ratios_to_deltas()
+                self.o18_deltas = self.o18_ratios_to_deltas()
 
             self.kd_per_hr = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
             self.ko_per_hr = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
@@ -186,6 +198,16 @@ class DLWSubject:
         """Convert 18O delta values to ratios.
            :return: 18O ratios"""
         return ((self.o18_deltas / 1000) + 1) * O18_VSMOW_RATIO
+
+    def d_ratios_to_deltas(self):
+        """Convert deuterium ratio values to delta.
+           :return: deuterium deltas"""
+        return (self.d_ratios/D_VSMOW_RATIO -1)*1000
+
+    def o18_ratios_to_deltas(self):
+        """Convert 18O ratio values to deltas.
+           :return: 18O deltas"""
+        return ((self.o18_ratios /O18_VSMOW_RATIO-1)*1000)
 
     @staticmethod
     def isotope_turnover_2pt(background, initratio, finalratio, elapsedhours):
