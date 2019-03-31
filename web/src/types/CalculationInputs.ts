@@ -5,10 +5,11 @@ export interface CalculationInputs {
     o_deltas: string[],
     datetimes: number[][],
     dose_weights: string[],
-    mol_masses: string[],
     dose_enrichments: string[],
     subject_weights: string[],
-    csv_name: string
+    csv_name: string,
+    subject_id: string,
+    mixed_dose: boolean
 }
 
 export const BLANK_CALCULATION_INPUTS: CalculationInputs = {
@@ -16,10 +17,11 @@ export const BLANK_CALCULATION_INPUTS: CalculationInputs = {
     o_deltas: [],
     datetimes: [],
     dose_weights: [],
-    mol_masses: [],
     dose_enrichments: [],
     subject_weights: [],
-    csv_name: ""
+    csv_name: "",
+    subject_id: "",
+    mixed_dose: false
 };
 
 export enum Timing {
