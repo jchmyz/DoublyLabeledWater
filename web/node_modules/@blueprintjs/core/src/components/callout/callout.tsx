@@ -1,13 +1,23 @@
 /*
  * Copyright 2017 Palantir Technologies, Inc. All rights reserved.
  *
- * Licensed under the terms of the LICENSE file distributed with this project.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import classNames from "classnames";
 import * as React from "react";
 
-import { Classes, DISPLAYNAME_PREFIX, HTMLDivProps, IIntentProps, Intent, IProps } from "../../common";
+import { Classes, DISPLAYNAME_PREFIX, HTMLDivProps, IIntentProps, Intent, IProps, MaybeElement } from "../../common";
 import { Icon } from "../../index";
 import { H4 } from "../html/html";
 import { IconName } from "../icon/icon";
@@ -20,7 +30,7 @@ export interface ICalloutProps extends IIntentProps, IProps, HTMLDivProps {
      * If this prop is omitted or `undefined`, the `intent` prop will determine a default icon.
      * If this prop is explicitly `null`, no icon will be displayed (regardless of `intent`).
      */
-    icon?: IconName | JSX.Element | null;
+    icon?: IconName | MaybeElement;
 
     /**
      * Visual intent color to apply to background, title, and icon.
@@ -62,7 +72,7 @@ export class Callout extends React.PureComponent<ICalloutProps, {}> {
         );
     }
 
-    private getIconName(icon?: ICalloutProps["icon"], intent?: Intent): JSX.Element | IconName | undefined {
+    private getIconName(icon?: ICalloutProps["icon"], intent?: Intent): IconName | MaybeElement {
         // 1. no icon
         if (icon === null) {
             return undefined;

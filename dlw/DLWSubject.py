@@ -452,3 +452,4 @@ class DLWSubject:
             file = open(filename, 'a+')
             np.savetxt(file, write_data, delimiter=',', header=write_header, comments='', fmt="%s")
         file.close()
+        return os.path.abspath(filename)

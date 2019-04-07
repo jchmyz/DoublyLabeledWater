@@ -1,19 +1,46 @@
 /*
  * Copyright 2018 Palantir Technologies, Inc. All rights reserved.
  *
- * Licensed under the terms of the LICENSE file distributed with this project.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-import { Modifiers as PopperModifiers } from "popper.js";
+import { Boundary as PopperBoundary, Modifiers as PopperModifiers } from "popper.js";
 import { Position } from "../../common/position";
 import { IProps } from "../../common/props";
 import { IOverlayableProps } from "../overlay/overlay";
 
-// re-export this symbol for library consumers
-export { PopperModifiers };
+// re-export symbols for library consumers
+export { PopperBoundary, PopperModifiers };
+
+/** `Position` with `"auto"` values, used by `Popover` and `Tooltip`. */
+export const PopoverPosition = {
+    ...Position,
+    AUTO: "auto" as "auto",
+    AUTO_END: "auto-end" as "auto-end",
+    AUTO_START: "auto-start" as "auto-start",
+};
+export type PopoverPosition = typeof PopoverPosition[keyof typeof PopoverPosition];
 
 /** Props shared between `Popover` and `Tooltip`. */
 export interface IPopoverSharedProps extends IOverlayableProps, IProps {
+    /**
+     * Determines the boundary element used by Popper for its `flip` and
+     * `preventOverflow` modifiers. Three shorthand keywords are supported;
+     * Popper will find the correct DOM element itself.
+     * @default "scrollParent"
+     */
+    boundary?: PopperBoundary;
+
     /**
      * When enabled, `preventDefault()` is invoked on `click` events that close
      * this popover, which will prevent those clicks from closing outer
@@ -80,7 +107,7 @@ export interface IPopoverSharedProps extends IOverlayableProps, IProps {
      * Callback invoked in controlled mode when the popover open state *would*
      * change due to user interaction.
      */
-    onInteraction?: (nextOpenState: boolean) => void;
+    onInteraction?: (nextOpenState: boolean, e?: React.SyntheticEvent<HTMLElement>) => void;
 
     /**
      * Whether the popover should open when its target is focused. If `true`,
@@ -96,12 +123,6 @@ export interface IPopoverSharedProps extends IOverlayableProps, IProps {
     popoverClassName?: string;
 
     /**
-     * Space-delimited string of class names applied to the `Portal` element if
-     * `usePortal={true}`.
-     */
-    portalClassName?: string;
-
-    /**
      * The position (relative to the target) at which the popover should appear.
      *
      * The default value of `"auto"` will choose the best position when opened
@@ -109,12 +130,18 @@ export interface IPopoverSharedProps extends IOverlayableProps, IProps {
      * user scrolls around.
      * @default "auto"
      */
-    position?: Position | "auto" | "auto-start" | "auto-end";
+    position?: PopoverPosition;
 
     /**
      * Space-delimited string of class names applied to the target element.
      */
     targetClassName?: string;
+
+    /**
+     * HTML props to spread to target element. Use `targetTagName` to change
+     * the type of element rendered. Note that `ref` is not supported.
+     */
+    targetProps?: React.HTMLAttributes<HTMLElement>;
 
     /**
      * HTML tag name for the target element. This must be an HTML element to

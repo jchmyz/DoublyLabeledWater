@@ -1,7 +1,17 @@
 /*
  * Copyright 2015 Palantir Technologies, Inc. All rights reserved.
  *
- * Licensed under the terms of the LICENSE file distributed with this project.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import * as React from "react";
@@ -22,6 +32,13 @@ export type HTMLDivProps = React.HTMLAttributes<HTMLDivElement>;
  * Does not include React's `ref` or `key`.
  */
 export type HTMLInputProps = React.InputHTMLAttributes<HTMLInputElement>;
+
+/**
+ * Alias for a `JSX.Element` or a value that renders nothing.
+ *
+ * In React, `boolean`, `null`, and `undefined` do not produce any output.
+ */
+export type MaybeElement = JSX.Element | false | null | undefined;
 
 /**
  * A shared base interface for all Blueprint component props.
@@ -45,7 +62,7 @@ export interface IActionProps extends IIntentProps, IProps {
     disabled?: boolean;
 
     /** Name of a Blueprint UI icon (or an icon element) to render before the text. */
-    icon?: IconName | JSX.Element;
+    icon?: IconName | MaybeElement;
 
     /** Click event handler. */
     onClick?: (event: React.MouseEvent<HTMLElement>) => void;

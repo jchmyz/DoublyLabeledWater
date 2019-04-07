@@ -1,13 +1,23 @@
 /*
  * Copyright 2016 Palantir Technologies, Inc. All rights reserved.
  *
- * Licensed under the terms of the LICENSE file distributed with this project.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import classNames from "classnames";
 import * as React from "react";
 
-import { Classes, DISPLAYNAME_PREFIX, IIntentProps, IProps, Utils } from "../../common";
+import { Classes, DISPLAYNAME_PREFIX, IIntentProps, IProps, MaybeElement, Utils } from "../../common";
 import { isReactNodeEmpty } from "../../common/utils";
 import { Icon, IconName } from "../icon/icon";
 import { Text } from "../text/text";
@@ -19,8 +29,14 @@ export interface ITagProps extends IProps, IIntentProps, React.HTMLAttributes<HT
      */
     active?: boolean;
 
+    /**
+     * Whether the tag should take up the full width of its container.
+     * @default false
+     */
+    fill?: boolean;
+
     /** Name of a Blueprint UI icon (or an icon element) to render before the children. */
-    icon?: IconName | JSX.Element;
+    icon?: IconName | MaybeElement;
 
     /**
      * Whether the tag should visually respond to user interactions. If set
@@ -66,7 +82,7 @@ export interface ITagProps extends IProps, IIntentProps, React.HTMLAttributes<HT
     onRemove?: (e: React.MouseEvent<HTMLButtonElement>, tagProps: ITagProps) => void;
 
     /** Name of a Blueprint UI icon (or an icon element) to render after the children. */
-    rightIcon?: IconName | JSX.Element;
+    rightIcon?: IconName | MaybeElement;
 
     /**
      * Whether this tag should have rounded ends.
@@ -83,6 +99,7 @@ export class Tag extends React.PureComponent<ITagProps, {}> {
             active,
             children,
             className,
+            fill,
             icon,
             intent,
             interactive,
@@ -101,6 +118,7 @@ export class Tag extends React.PureComponent<ITagProps, {}> {
             Classes.intentClass(intent),
             {
                 [Classes.ACTIVE]: active,
+                [Classes.FILL]: fill,
                 [Classes.INTERACTIVE]: interactive,
                 [Classes.LARGE]: large,
                 [Classes.MINIMAL]: minimal,

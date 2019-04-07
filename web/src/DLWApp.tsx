@@ -4,14 +4,16 @@ import {
     FormGroup,
     NumericInput,
     Button, Toaster, Position,
-    InputGroup, Alignment, Tag, FileInput, Dialog, Checkbox
+    InputGroup, Alignment, Tag, FileInput, Dialog, Checkbox, Radio, RadioGroup
 } from "@blueprintjs/core";
 import * as DateTimePicker from 'react-datetime';
-import {Moment, utc} from "moment";
-import {calculate_from_inputs} from "./Requests";
+import * as moment from 'moment';
+import {calculate_from_inputs, export_to_csv} from "./Requests";
 import {FormEvent} from "react";
 import {Card, Icon, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@blueprintjs/core/lib/cjs";
+import {ScatterChart, CartesianGrid, Scatter, YAxis, XAxis, Tooltip} from 'recharts';
 import {NumberInput} from "./NumberInput";
+import convert_string_to_moment from "./utilities";
 
 const DEUTERIUM = "Deuterium";
 const OXYGEN = "Oxygen 18";
@@ -47,13 +49,19 @@ export interface Results {
     } | null
 }
 
+enum DeltaUnits {
+    permil = "permil",
+    ppm = "ppm"
+}
+
 interface DLWState {
     input_csv_name: string;
     info_overlay_open: boolean;
 
+    delta_units: DeltaUnits;
     deuterium_deltas: string[],
     oxygen_deltas: string[],
-    datetimes: (string | Moment)[],
+    datetimes: moment.Moment[],
     dose_weights: string[],
     dose_enrichments: string[],
     subject_weights: string[],
@@ -66,24 +74,28 @@ interface DLWState {
     dose_weights_validated: boolean,
     dose_enrichments_validated: boolean,
     subject_weights_validated: boolean,
-    dates_chronological: boolean[]
 
     results: Results
-    csv_name: string,
+    new_csv_name: string,
+    append_csv_name: string
 }
 
 const AppToaster = Toaster.create({className: "app-toaster", position: Position.TOP_RIGHT});
 
 export class DLWApp extends React.Component<any, DLWState> {
+    now: moment.Moment;
+
     constructor(props: any) {
         super(props);
+        this.now = moment();
         this.state = {
             input_csv_name: "",
             info_overlay_open: false,
 
+            delta_units: DeltaUnits.permil,
             deuterium_deltas: ["", "", "", "", ""],
             oxygen_deltas: ["", "", "", "", ""],
-            datetimes: ["", "", "", "", ""],
+            datetimes: [this.now, this.now, this.now, this.now, this.now],
             dose_weights: ["", ""],
             dose_enrichments: ["", ""],
             mixed_dose: false,
@@ -96,10 +108,9 @@ export class DLWApp extends React.Component<any, DLWState> {
             dose_weights_validated: false,
             dose_enrichments_validated: false,
             subject_weights_validated: false,
-            dates_chronological: [true, true, true, true, true],
 
             results: {calculations: null, rco2_ee: null, error_flags: null},
-            csv_name: "",
+            new_csv_name: "", append_csv_name: ""
         };
     }
 
@@ -116,21 +127,19 @@ export class DLWApp extends React.Component<any, DLWState> {
         for (let i = 0; i < NUM_SAMPLE_TIMES; i++) {
             deuterium_delta_inputs.push(
                 <NumberInput placeholder={SAMPLE_LABELS[i] + " Deuterium delta"} index={i} key={i}
-                             change_function={this.handle_deuterium_delta_change} unit={"permil"}
+                             change_function={this.handle_deuterium_delta_change} unit={this.state.delta_units}
                              value={this.state.deuterium_deltas[i]}/>);
             oxygen_delta_inputs.push(
-                <NumberInput placeholder={SAMPLE_LABELS[i] + ' Oxygen 18 delta'} index={i} key={i} unit={"permil"}
+                <NumberInput placeholder={SAMPLE_LABELS[i] + ' Oxygen 18 delta'} index={i} key={i} unit={this.state.delta_units}
                              change_function={this.handle_oxygen_delta_change} value={this.state.oxygen_deltas[i]}/>);
             collection_time_inputs.push(
-                <Popover content={<p>Collection time inputs must be in chronological order.</p>}
-                         className='date-warning-popover' isOpen={!this.state.dates_chronological[i]}>
-                    <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
-                                    inputProps={{
-                                        className: 'date-input-box .bp3-input',
-                                        placeholder: ' ' + SAMPLE_LABELS[i] + ' sample date and time'
-                                    }}
-                                    key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
-                </Popover>
+                <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
+                                inputProps={{
+                                    className: 'date-input-box .bp3-input',
+                                    placeholder: ' ' + SAMPLE_LABELS[i] + ' sample date and time',
+                                    value: (this.state.datetimes[i] === this.now) ? "" : this.state.datetimes[i].format('YYYY-MM-DD HH:mm')
+                                }}
+                                key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
             );
         }
 
@@ -247,6 +256,31 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <p className="result-label">{this.state.results.error_flags.ko_kd[0] + ":"}</p>
                     <p className={"result-value " + error_class}>{this.state.results.error_flags.ko_kd[1]}</p>
                 </div>);
+            let chart_data_d_meas = [];
+            let chart_data_o18_meas = [];
+            let date_ticks = [];
+            for (let i = 0; i < this.state.deuterium_deltas.length; i++) {
+                chart_data_d_meas.push({
+                                           x: moment.parseZone(this.state.datetimes[i]).format("MM-DD HH:mm"),
+                                           y: this.state.deuterium_deltas[i]
+                                       });
+                chart_data_o18_meas.push({
+                                             x: moment.parseZone(this.state.datetimes[i]).format("MM-DD HH:mm"),
+                                             y: this.state.oxygen_deltas[i]
+                                         });
+                date_ticks.push(moment.parseZone(this.state.datetimes[i].format("MM-DD HH:mm")));
+            }
+            console.log('data is', chart_data_d_meas, chart_data_o18_meas);
+            let deltas_chart: JSX.Element = (
+                <ScatterChart height={300} width={500} margin={{top: 20, right: 40, bottom: 40, left: 40}}>
+                    <XAxis type="category" name="Time of Collection" label="Time of Collection" interval={0}/>
+                    <YAxis yAxisId="left" type="number" dataKey="y" name="Measured 2H" label="Measured 2H" unit={this.state.delta_units} stroke="#8884d8"/>
+                    <YAxis yAxisId="right" type="number" dataKey="y" name="Measured O18" label="Measured O18" unit={this.state.delta_units} orientation="right" stroke="#82ca9d"/>
+                    <Tooltip cursor={{strokeDasharray: '3 3'}}/>
+                    <Scatter yAxisId="left" name="Measured 2H" data={chart_data_d_meas} fill="#8884d8"/>
+                    <Scatter yAxisId="right" name="Measured O18" data={chart_data_o18_meas} fill="#82ca9d"/>
+                </ScatterChart>
+            );
             results_display = (
                 <div className='results-display'>
                     <Card className='results-card'>
@@ -263,6 +297,13 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <div className='result-section'>
                                 <h5 className='result-header-error'>Error Flags</h5>
                                 {results_error_flags}
+                            </div>
+                        </div>
+                    </Card>
+                    <Card className='results-card'>
+                        <div className='result-sections'>
+                            <div className='result-section'>
+                                {deltas_chart}
                             </div>
                         </div>
                     </Card>
@@ -313,6 +354,14 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <h5>Oxygen 18 Delta Values</h5>
                             {oxygen_delta_inputs}
                         </div>
+                        <div className='delta-unit-radio'>
+                            <RadioGroup onChange={(event: FormEvent<HTMLInputElement>) => {
+                                this.setState({delta_units: (event.target as any).value})
+                            }} selectedValue={this.state.delta_units}>
+                                <Radio label="permil" value={DeltaUnits.permil} large={true}/>
+                                <Radio label="ppm" value={DeltaUnits.ppm} large={true}/>
+                            </RadioGroup>
+                        </div>
                     </div>
                     <div className='element-wise-inputs'>
                         <div className='inputs-by-element'>
@@ -323,10 +372,11 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <h5>Dose Enrichments</h5>
                             {dose_enrichment_inputs}
                         </div>
-                        <div className='inputs-by-element'>
-                            <Checkbox checked={this.state.mixed_dose} label="Mixed Dose" onChange={() => {
-                                this.setState({mixed_dose: !this.state.mixed_dose})
-                            }}/>
+                        <div className='mixed-dose-box'>
+                            <Checkbox checked={this.state.mixed_dose} labelElement={<h5>Mixed Dose</h5>} large={true}
+                                      onChange={() => {
+                                          this.setState({mixed_dose: !this.state.mixed_dose})
+                                      }} alignIndicator={Alignment.RIGHT}/>
                         </div>
                     </div>
                     <div className='element-wise-inputs'>
@@ -343,15 +393,26 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <h5>Subject ID</h5>
                             <InputGroup leftIcon={(this.state.subject_id ? "tick" : "circle-arrow-right")}
                                         className={'.bp3-fill'}
-                                        onChange={(event: FormEvent<HTMLElement>) => this.setState({subject_id: event.target.value})}
+                                        onChange={(event: FormEvent<HTMLElement>) => this.setState({subject_id: (event.target as any).value})}
                                         placeholder='ID' value={this.state.subject_id}/>
                         </div>
+                        <Button className='calculate-button' onClick={this.submit_inputs}
+                                disabled={!all_inputs_validated}>CALCULATE RESULTS</Button>
                     </div>
                     <div className='submit-group'>
-                        <InputGroup placeholder='Results CSV filename (optional)' className='csv-name-input'
-                                    onChange={(event: FormEvent<HTMLElement>) =>
-                                        this.setState({csv_name: (event.target as HTMLInputElement).value})}/>
-                        <Button onClick={this.submit_inputs} disabled={!all_inputs_validated}>SUBMIT</Button>
+                        <div className='csv-input-new'>
+                            <h5>Input a name for a new .csv file</h5>
+                            <InputGroup placeholder='CSV filename' className='csv_input'
+                                        onChange={(event: FormEvent<HTMLElement>) =>
+                                            this.setState({new_csv_name: (event.target as HTMLInputElement).value})}/>
+                        </div>
+                        <div className='csv-append'>
+                            <h5>Or, select an existing .csv file to append results to</h5>
+                            <FileInput text={this.state.append_csv_name || "Choose file..."}
+                                       onInputChange={this.handle_csv_append_choice} className='csv-input'/>
+                        </div>
+                        <Button onClick={this.export} disabled={!(this.state.results.calculations && (this.state.new_csv_name || this.state.append_csv_name))}
+                                className='export-button'>EXPORT TO CSV</Button>
                     </div>
                     {results_display}
                 </FormGroup>
@@ -359,21 +420,38 @@ export class DLWApp extends React.Component<any, DLWState> {
         );
     }
 
+    export = async () => {
+        let results = await export_to_csv(this.state.new_csv_name);
+        if (results.error) {
+            AppToaster.show({
+                                message: "Error exporting results to csv. Please file a bug report at https://github.com/jchmyz/DoublyLabeledWater/issues",
+                                intent: "danger",
+                                timeout: 0
+                            });
+        } else {
+            AppToaster.show({
+                                message: "Results successfully exported to " + results.saved_file,
+                                intent: "success",
+                                timeout: 3000
+                            });
+        }
+    };
+
     submit_inputs = async () => {
-        let datetimes = this.state.datetimes.map((value: Moment) => {
+        let datetimes = this.state.datetimes.map((value: moment.Moment) => {
             return value.toArray();
         });
         let results = await calculate_from_inputs(
             {
-                d_deltas: this.state.deuterium_deltas,
-                o_deltas: this.state.oxygen_deltas,
+                d_meas: this.state.deuterium_deltas,
+                o18_meas: this.state.oxygen_deltas,
                 datetimes: datetimes,
                 dose_weights: this.state.dose_weights,
                 dose_enrichments: this.state.dose_enrichments,
                 subject_weights: this.state.subject_weights,
-                csv_name: this.state.csv_name,
                 subject_id: this.state.subject_id,
-                mixed_dose: this.state.mixed_dose
+                mixed_dose: this.state.mixed_dose,
+                in_permil: (this.state.delta_units === DeltaUnits.permil)
             }
         );
         if (results.calculations && results.error_flags && results.rco2_ee) {
@@ -389,8 +467,7 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_csv_upload = async (event: FormEvent<HTMLInputElement>) => {
-        // @ts-ignore
-        let file = event.target.files[0];
+        let file = (event.target as any).files[0];
         if (file.type === "text/csv") {
             this.setState({input_csv_name: file.name});
             let reader = new FileReader();
@@ -400,6 +477,19 @@ export class DLWApp extends React.Component<any, DLWState> {
         } else {
             AppToaster.show({
                                 message: "Select a .csv file. For formatting help, press 'Help' in the upper right hand corner",
+                                intent: "danger",
+                                timeout: 0
+                            });
+        }
+    };
+
+    handle_csv_append_choice = (event: FormEvent<HTMLInputElement>) => {
+        let file = (event.target as any).files[0];
+        if (file.type === "text/csv") {
+            this.setState({append_csv_name: file.name});
+        } else {
+            AppToaster.show({
+                                message: "Select an existing .csv file.",
                                 intent: "danger",
                                 timeout: 0
                             });
@@ -417,7 +507,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         try {
             let data = all_text_lines[1].split(',');
             console.log('data is', data);
-            //make this more modular deal with other csv orders
+            //TODO: make this deal with other csv orders
             let d_deltas = data.slice(0, 5);
             let o_deltas = data.slice(5, 10);
             let sample_times = data.slice(10, 15);
@@ -426,14 +516,14 @@ export class DLWApp extends React.Component<any, DLWState> {
             let subject_weights = data.slice(19, 21);
             let subject_id = data.slice(21, 22);
             for (let i = 0; i < d_deltas.length; i++) {
-                this.handle_deuterium_delta_change(i, {target: {value: d_deltas[i]}});
-                this.handle_oxygen_delta_change(i, {target: {value: o_deltas[i]}});
-                this.handle_date_change(i, utc(sample_times[i]));
+                this.handle_deuterium_delta_change(i, d_deltas[i]);
+                this.handle_oxygen_delta_change(i, o_deltas[i]);
+                this.handle_date_change(i, moment.utc(sample_times[i]));
             }
             for (let i = 0; i < dose_weights.length; i++) {
-                this.handle_dose_weight_change(i, {target: {value: dose_weights[i]}});
-                this.handle_dose_enrichment_change(i, {target: {value: dose_enrichments[i]}});
-                this.handle_subject_weight_change(i, {target: {value: subject_weights[i]}});
+                this.handle_dose_weight_change(i, dose_weights[i]);
+                this.handle_dose_enrichment_change(i, dose_enrichments[i]);
+                this.handle_subject_weight_change(i, subject_weights[i]);
             }
             this.setState({subject_id: subject_id});
         } catch (e) {
@@ -467,49 +557,69 @@ export class DLWApp extends React.Component<any, DLWState> {
         return true;
     };
 
-    handle_deuterium_delta_change = (index: number, event: FormEvent<HTMLElement>) => {
-        let value = (event.target as HTMLInputElement).value;
-        if (!isNaN(+value)) {
-            let new_deltas = this.state.deuterium_deltas;
-            new_deltas.splice(index, 1, value);
-            this.setState({
-                              deuterium_deltas: new_deltas,
-                              deuterium_deltas_validated: this.check_numerical_inputs(new_deltas)
-                          });
+    handle_deuterium_delta_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        let value = (typeof event === "string") ? event : (event.target as HTMLInputElement).value;
+        let values_sep_by_spaces = value.split(" ");
+        values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
+        if (values_sep_by_spaces.length === 1 || value === "") {
+            if (!isNaN(+value) || value === "") {
+                let new_deltas = this.state.deuterium_deltas;
+                new_deltas.splice(index, 1, value);
+                this.setState({
+                                  deuterium_deltas: new_deltas,
+                                  deuterium_deltas_validated: this.check_numerical_inputs(new_deltas)
+                              });
+            }
+        } else {
+            for (let i = 0; i < values_sep_by_spaces.length; i++) {
+                this.handle_deuterium_delta_change(index + i, values_sep_by_spaces[i]);
+            }
         }
     };
 
-    handle_oxygen_delta_change = (index: number, event: FormEvent<HTMLElement>) => {
-        let value = (event.target as HTMLInputElement).value;
-        if (!isNaN(+value)) {
-            let new_deltas = this.state.oxygen_deltas;
-            new_deltas.splice(index, 1, value);
-            this.setState({
-                              oxygen_deltas: new_deltas,
-                              oxygen_deltas_validated: this.check_numerical_inputs(new_deltas)
-                          });
+    handle_oxygen_delta_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        let value = (typeof event === "string") ? event : (event.target as HTMLInputElement).value;
+        let values_sep_by_spaces = value.split(" ");
+        values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
+        if (values_sep_by_spaces.length === 1 || value === "") {
+            if (!isNaN(+value) || (value === "")) {
+                let new_deltas = this.state.oxygen_deltas;
+                new_deltas.splice(index, 1, value);
+                this.setState({
+                                  oxygen_deltas: new_deltas,
+                                  oxygen_deltas_validated: this.check_numerical_inputs(new_deltas)
+                              });
+            }
+        } else {
+            for (let i = 0; i < values_sep_by_spaces.length; i++) {
+                this.handle_oxygen_delta_change(index + i, values_sep_by_spaces[i]);
+            }
         }
     };
 
-    handle_date_change = (i: number, value: string | Moment) => {
-        console.log('into handle date change- got value', value, typeof(value));
+    handle_date_change = (index: number, value: string | moment.Moment) => {
+        let new_date_array = this.state.datetimes;
         if (typeof value != "string") {
             let all_dates_filled = true;
-            let new_date_array = this.state.datetimes;
-            let dates_chronological = this.state.dates_chronological;
-            dates_chronological.splice(i, 1, true);
-            for (let j = 0; j < i; j++) {
-                if (typeof(new_date_array[j]) != "string") {
-                    if (value.isBefore(new_date_array[j])) {
-                        dates_chronological.splice(i, 1, false);
-                        all_dates_filled = false;
-                        break;
-                    }
+            for (let j = 0; j < index; j++) {
+                if ((new_date_array[j] != this.now) && value.isBefore(new_date_array[j])) {
+                    AppToaster.show({
+                                        message: "Collection dates must be in chronological order.",
+                                        intent: "danger",
+                                        timeout: 0
+                                    });
+                    return;
+                }
+                else if (value.isSame(new_date_array[j])) {
+                    AppToaster.show({
+                                        message: "Duplicate collection dates entered", intent: "danger", timeout: 0
+                                    });
+                    return;
                 }
             }
-            new_date_array.splice(i, 1, value);
+            new_date_array.splice(index, 1, value);
             for (let date of new_date_array) {
-                if (typeof date === "string") {
+                if (date === this.now) {
                     all_dates_filled = false;
                     break;
                 }
@@ -517,44 +627,106 @@ export class DLWApp extends React.Component<any, DLWState> {
             this.setState({
                               datetimes: new_date_array,
                               datetimes_validated: all_dates_filled,
-                              dates_chronological: dates_chronological
                           })
+        } else {
+            let split_values = value.split(" ");
+            if (value === "") {
+                new_date_array.splice(index, 1, this.now);
+                this.setState({datetimes: new_date_array, datetimes_validated: false});
+            } else {
+                let i = 0;
+                let skipped_indices = 0; // track indices to place dates in correct boxes
+                while (i < split_values.length) {
+                    // deal with spaces between date and time
+                    if (moment.parseZone(new Date(split_values[i])).isValid()) {
+                        if (i < split_values.length - 1) {
+                            if (moment.parseZone(new Date(split_values[i + 1])).isValid()) {
+                                //both valid dates- don't need to worry about spaces, treat them as separate dates
+                                let as_moment = convert_string_to_moment(split_values[i]);
+                                if (typeof as_moment !== "boolean") {
+                                    this.handle_date_change(index + i, as_moment);
+                                }
+                                i++;
+                            } else { // next value isn't a valid date- likely a time. tack it onto the date
+                                let as_moment = convert_string_to_moment(split_values[i].concat(" ", split_values[i + 1]));
+                                if (typeof as_moment !== "boolean") {
+                                    this.handle_date_change(index + i - skipped_indices, as_moment);
+                                }
+                                skipped_indices++;
+                                i += 2;
+                            }
+                        } else {
+                            let as_moment = convert_string_to_moment(split_values[i]);
+                            if (typeof as_moment !== "boolean") {
+                                this.handle_date_change(index + i, as_moment);
+                            }
+                            i++;
+                        }
+                    } else {
+                        i++;
+                    }
+                }
+            }
         }
     };
 
-    handle_dose_weight_change = (index: number, event: FormEvent<HTMLElement>) => {
-        let value = (event.target as HTMLInputElement).value;
-        if (!isNaN(+value)) {
-            let new_dose_weights = this.state.dose_weights;
-            new_dose_weights.splice(index, 1, value);
-            this.setState({
-                              dose_weights: new_dose_weights,
-                              dose_weights_validated: this.check_numerical_inputs(new_dose_weights)
-                          });
+    handle_dose_weight_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
+        let values_sep_by_spaces = value.split(" ");
+        values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
+        if (values_sep_by_spaces.length === 1 || value === "") {
+            if (!isNaN(+value) || value === "") {
+                let new_dose_weights = this.state.dose_weights;
+                new_dose_weights.splice(index, 1, value);
+                this.setState({
+                                  dose_weights: new_dose_weights,
+                                  dose_weights_validated: this.check_numerical_inputs(new_dose_weights)
+                              });
+            }
+        } else {
+            for (let i = 0; i < values_sep_by_spaces.length; i++) {
+                this.handle_dose_weight_change(index + i, values_sep_by_spaces[i]);
+            }
         }
     };
 
-    handle_dose_enrichment_change = (index: number, event: FormEvent<HTMLElement>) => {
-        let value = (event.target as HTMLInputElement).value;
-        if (!isNaN(+value)) {
-            let new_enrichments = this.state.dose_enrichments;
-            new_enrichments.splice(index, 1, value);
-            this.setState({
-                              dose_enrichments: new_enrichments,
-                              dose_enrichments_validated: this.check_numerical_inputs(new_enrichments)
-                          });
+    handle_dose_enrichment_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
+        let values_sep_by_spaces = value.split(" ");
+        values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
+        if (values_sep_by_spaces.length === 1 || value === "") {
+            if (!isNaN(+value) || value === "") {
+                let new_enrichments = this.state.dose_enrichments;
+                new_enrichments.splice(index, 1, value);
+                this.setState({
+                                  dose_enrichments: new_enrichments,
+                                  dose_enrichments_validated: this.check_numerical_inputs(new_enrichments)
+                              });
+            }
+        } else {
+            for (let i = 0; i < values_sep_by_spaces.length; i++) {
+                this.handle_dose_enrichment_change(index + i, values_sep_by_spaces[i]);
+            }
         }
     };
 
-    handle_subject_weight_change = (index: number, event: FormEvent<HTMLElement>) => {
-        let value = (event.target as HTMLInputElement).value;
-        if (!isNaN(+value)) {
-            let new_weights = this.state.subject_weights;
-            new_weights.splice(index, 1, value);
-            this.setState({
-                              subject_weights: new_weights,
-                              subject_weights_validated: this.check_numerical_inputs(new_weights)
-                          });
+    handle_subject_weight_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
+        let values_sep_by_spaces = value.split(" ");
+        values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
+        if (values_sep_by_spaces.length === 1 || value === "") {
+            if (!isNaN(+value) || value === "") {
+                let new_weights = this.state.subject_weights;
+                new_weights.splice(index, 1, value);
+                this.setState({
+                                  subject_weights: new_weights,
+                                  subject_weights_validated: this.check_numerical_inputs(new_weights)
+                              });
+            }
+        } else {
+            for (let i = 0; i < values_sep_by_spaces.length; i++) {
+                this.handle_subject_weight_change(index + i, values_sep_by_spaces[i]);
+            }
         }
     };
 
