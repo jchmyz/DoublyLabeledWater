@@ -31,28 +31,28 @@ def calculate_from_inputs():
 
     return json.dumps({
         "calculations": {
-            "ndp_kg": ["NdP (kg)", round(CALCULATED_RESULTS.nd['adj_plat_avg_kg'], 2)],
-            "kd_hr": ["kd/hour", round(CALCULATED_RESULTS.kd_per_hr, 3)],
-            "nop_kg": ["NoP (kg)", round(CALCULATED_RESULTS.no['adj_plat_avg_kg'], 3)],
-            "ko_hr": ["ko/hour", round(CALCULATED_RESULTS.ko_per_hr, 3)],
+            "ndp_kg": ["NdP (kg)", round(CALCULATED_RESULTS.nd['adj_plat_avg_kg'], 4)],
+            "kd_hr": ["kd/hour", round(CALCULATED_RESULTS.kd_per_hr, 6)],
+            "nop_kg": ["NoP (kg)", round(CALCULATED_RESULTS.no['adj_plat_avg_kg'], 4)],
+            "ko_hr": ["ko/hour", round(CALCULATED_RESULTS.ko_per_hr, 6)],
             "body_water_avg_kg": ["Total Body Water Average (kg)",
-                                  round(CALCULATED_RESULTS.total_body_water_ave_kg, 3)],
-            "fat_free_mass_kg": ["Fat Free Mass (kg)", round(CALCULATED_RESULTS.fat_free_mass_kg, 3)],
-            "fat_mass_kg": ["Fat Mass (kg)", round(CALCULATED_RESULTS.fat_mass_kg, 3)],
-            "body_fat_percentage": ["Body Fat Percentage", round(CALCULATED_RESULTS.body_fat_percent, 3)]
+                                  round(CALCULATED_RESULTS.total_body_water_ave_kg, 4)],
+            "fat_free_mass_kg": ["Fat Free Mass (kg)", round(CALCULATED_RESULTS.fat_free_mass_kg, 4)],
+            "fat_mass_kg": ["Fat Mass (kg)", round(CALCULATED_RESULTS.fat_mass_kg, 4)],
+            "body_fat_percentage": ["Body Fat Percentage", round(CALCULATED_RESULTS.body_fat_percent, 4)]
         },
         "rco2_ee": {
-            "rco2_mol_day": ["rCO2 (mol/day)", round(CALCULATED_RESULTS.schoeller_co2_int_mol_day, 3)],
-            "rco2_l_hr": ["rCO2 (L/hour)", round(CALCULATED_RESULTS.schoeller_co2_int_L_hr, 3)],
-            "ee_kcal_day": ["EE (kcal/day)", round(CALCULATED_RESULTS.schoeller_tee_int_kcal_day, 3)],
-            "ee_mj_day": ["EE (MJ/day)", round(CALCULATED_RESULTS.schoeller_tee_int_mj_day, 3)]
+            "rco2_mol_day": ["rCO2 (mol/day)", round(CALCULATED_RESULTS.schoeller_co2_int_mol_day, 4)],
+            "rco2_l_hr": ["rCO2 (L/hour)", round(CALCULATED_RESULTS.schoeller_co2_int_L_hr, 4)],
+            "ee_kcal_day": ["EE (kcal/day)", round(CALCULATED_RESULTS.schoeller_tee_int_kcal_day, 5)],
+            "ee_mj_day": ["EE (MJ/day)", round(CALCULATED_RESULTS.schoeller_tee_int_mj_day, 4)]
         },
         "error_flags": {
-            "plateau_2h": ["2H plateau (<5%)", round(CALCULATED_RESULTS.d_ratio_percent, 3)],
-            "plateau_180": ["18O Plateau (<5%)", round(CALCULATED_RESULTS.o18_ratio_percent, 3)],
-            "ds_ratio": ["DS ratio (1.000 - 1.070)", round(CALCULATED_RESULTS.dil_space_ratio, 3)],
-            "ee": ["EE (PD4-ED4 vs. PD5-ED5, <10%)", round(CALCULATED_RESULTS.ee_check, 3)],
-            "ko_kd": ["Ko/kd (1.1 - 1.7)", round(CALCULATED_RESULTS.ko_kd_ratio, 3)]
+            "plateau_2h": ["2H plateau (<5%)", round(CALCULATED_RESULTS.d_ratio_percent, 4)],
+            "plateau_180": ["18O Plateau (<5%)", round(CALCULATED_RESULTS.o18_ratio_percent, 4)],
+            "ds_ratio": ["DS ratio (1.000 - 1.070)", round(CALCULATED_RESULTS.dil_space_ratio, 4)],
+            "ee": ["EE (PD4-ED4 vs. PD5-ED5, <10%)", round(CALCULATED_RESULTS.ee_check, 4)],
+            "ko_kd": ["Ko/kd (1.1 - 1.7)", round(CALCULATED_RESULTS.ko_kd_ratio, 4)]
         }
     })
 

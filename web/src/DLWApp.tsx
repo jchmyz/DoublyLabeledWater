@@ -441,6 +441,11 @@ export class DLWApp extends React.Component<any, DLWState> {
         let datetimes = this.state.datetimes.map((value: moment.Moment) => {
             return value.toArray();
         });
+        // months are zero-index in Moment.js
+        let datetimes_correct_month = datetimes.map((value: number[]) => {
+            return value.splice(1, 1, value[1] + 1);
+        });
+        console.log('datetimes converted to', datetimes);
         let results = await calculate_from_inputs(
             {
                 d_meas: this.state.deuterium_deltas,
