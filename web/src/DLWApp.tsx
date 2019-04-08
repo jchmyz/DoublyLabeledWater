@@ -183,7 +183,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             results_calculations.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.calculations.body_water_avg_kg[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.calculations.body_fat_percentage[1] + " kg"}</p>
+                    <p className="result-value">{this.state.results.calculations.body_water_avg_kg[1] + " kg"}</p>
                 </div>);
             results_calculations.push(
                 <div className='result-pair'>
