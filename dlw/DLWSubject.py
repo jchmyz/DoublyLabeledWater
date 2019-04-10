@@ -184,8 +184,9 @@ class DLWSubject:
             self.d_ratio_percent = self.percent_difference(self.d_ratios[1] - self.d_ratios[0],
                                                            self.d_ratios[2] - self.d_ratios[0])
             # err flag 2 h plateau < 5%
-            self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1],
-                                                             self.o18_ratios[2])  # err flag o18 plateau
+            self.o18_ratio_percent = self.percent_difference(self.o18_ratios[1] - self.o18_ratios[0],
+                                                             self.o18_ratios[2] - self.o18_ratios[0])
+            # err flag o18 plateau < 5%
             self.ee_check = self.ee_consistency_check()  # err flag # 4 pd4
 
         else:
@@ -448,12 +449,12 @@ class DLWSubject:
                         'rCO2_plat_mol/day,rCO2_plat_L/day,EE_plat_kcal/day,EE_plat_MJ/day,'
                         '2H_plateau_%,18O_plateau_%,DS_ratio,EE_consistency_check,ko/kd')
         write_data = np.asarray(
-            [[self.subject_id, self. kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
+            [[self.subject_id, self.kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
               self.total_body_water_ave_kg, self.fat_free_mass_kg, self.fat_mass_kg, self.body_fat_percent,
               self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_hr, self.schoeller_tee_int_kcal_day,
               self.schoeller_tee_int_mj_day, self.schoeller_co2_plat_mol_day, self.schoeller_co2_plat_L_hr,
-              self.schoeller_tee_plat_kcal_day, self.schoeller_tee_plat_mj_day,self.d_ratio_percent,
-              self.o18_ratio_percent,self.dil_space_ratio,self.ee_check, self.ko_kd_ratio]])
+              self.schoeller_tee_plat_kcal_day, self.schoeller_tee_plat_mj_day, self.d_ratio_percent,
+              self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
         if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
             file = open(filename, 'a+')
             np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")
