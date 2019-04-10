@@ -169,7 +169,6 @@ class DLWSubject:
                                                              self.kd_per_hr, self.ko_per_hr)
             self.schoeller_co2_plat = self.calc_schoeller_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
                                                               self.kd_per_hr, self.ko_per_hr)
-
             self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY  # rco2 mols/day
             self.schoeller_co2_int_L_hr = self.schoeller_co2_int * LITERS_PER_MOL  # r2co2 l/day
 
@@ -446,7 +445,7 @@ class DLWSubject:
             :param: filename(string), the name of the file to which to save"""
         write_header = ('subject_id,kd_hr,ko_hr,Nd_plat_avg_mol,No_plat_avg_mol, TBW_avg_kg,FFM_kg,FM_kg,body_fat_%,'
                         'rCO2_int_mol/day,rCO2_int_L/day,EE_int_kcal/day,EE_int_MJ/day,'
-                        'rCO2_plat_mol/day,rCO2_plat_L/day,EE_plat_kcal/day,EE_plat_MJ/day'
+                        'rCO2_plat_mol/day,rCO2_plat_L/day,EE_plat_kcal/day,EE_plat_MJ/day,'
                         '2H_plateau_%,18O_plateau_%,DS_ratio,EE_consistency_check,ko/kd')
         write_data = np.asarray(
             [[self.subject_id, self. kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],

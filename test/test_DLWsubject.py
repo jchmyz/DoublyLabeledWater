@@ -68,13 +68,15 @@ class TestDLWSubject(TestCase):
 
     def test_d_ratios_to_deltas(self):
         test_subject = dlw.DLWSubject(D_PPM_TEST, O18_PPM_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST, False)
-        print (D_DELTAS_TEST, test_subject.d_deltas)
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST,
+                                      False)
+        print(D_DELTAS_TEST, test_subject.d_deltas)
         self.assertTrue(np.allclose(D_DELTAS_TEST, test_subject.d_deltas))
 
     def test_o18_ratios_to_deltas(self):
         test_subject = dlw.DLWSubject(D_PPM_TEST, O18_PPM_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
-                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST, False)
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST,
+                                      False)
         print(O18_DELTAS_TEST, test_subject.o18_deltas)
         self.assertTrue(np.allclose(O18_DELTAS_TEST, test_subject.o18_deltas))
 
@@ -151,7 +153,7 @@ class TestDLWSubject(TestCase):
         test_subject.save_results_csv(test_path)
         read_data = np.genfromtxt(test_path, delimiter=',', skip_header=1, dtype=str)
         self.assertEqual('TestSubject', read_data[0])
-        self.assertAlmostEqual(test_subject.no['plat_avg_mol'],float(read_data[4]))
+        self.assertAlmostEqual(test_subject.no['plat_avg_mol'], float(read_data[4]))
         self.assertAlmostEqual(test_subject.body_fat_percent, float(read_data[8]))
         self.assertAlmostEqual(test_subject.schoeller_tee_int_kcal_day, float(read_data[11]))
         self.assertAlmostEqual(test_subject.ko_kd_ratio, float(read_data[21]))
