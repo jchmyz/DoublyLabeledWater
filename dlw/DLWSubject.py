@@ -8,7 +8,7 @@ OXYGEN = "oxygen"
 D_VSMOW_RATIO = 0.00015576
 O18_VSMOW_RATIO = 0.0020052
 STANDARD_WATER_MOL_MASS = 18.10106 / 1000  # kg
-PPM_TO_RATIO = 1/1000000
+PPM_TO_RATIO = 1 / 1000000
 POP_DIL_SPACE_D = 1.041
 POP_DIL_SPACE_O = 1.007
 FAT_FREE_MASS_FACTOR = 0.73
@@ -132,7 +132,7 @@ class DLWSubject:
             self.subject_weights = subject_weights
             self.subject_id = subject_id
 
-            if(in_permil):
+            if (in_permil):
                 self.d_deltas = d_meas
                 self.o18_deltas = o18_meas
                 self.d_ratios = self.d_deltas_to_ratios()
@@ -173,6 +173,9 @@ class DLWSubject:
             self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY  # rco2 mols/day
             self.schoeller_co2_int_L_hr = self.schoeller_co2_int * LITERS_PER_MOL  # r2co2 l/day
 
+            self.schoeller_co2_plat_mol_day = self.schoeller_co2_plat * HOURS_PER_DAY
+            self.schoeller_co2_plat_L_hr = self.schoeller_co2_plat * LITERS_PER_MOL
+
             self.schoeller_tee_int_kcal_day = self.co2_to_tee(self.schoeller_co2_int)
             self.schoeller_tee_plat_kcal_day = self.co2_to_tee(self.schoeller_co2_plat)
 
@@ -202,12 +205,12 @@ class DLWSubject:
     def d_ratios_to_deltas(self):
         """Convert deuterium ratio values to delta.
            :return: deuterium deltas"""
-        return (self.d_ratios/D_VSMOW_RATIO -1)*1000
+        return (self.d_ratios / D_VSMOW_RATIO - 1) * 1000
 
     def o18_ratios_to_deltas(self):
         """Convert 18O ratio values to deltas.
            :return: 18O deltas"""
-        return ((self.o18_ratios /O18_VSMOW_RATIO-1)*1000)
+        return ((self.o18_ratios / O18_VSMOW_RATIO - 1) * 1000)
 
     @staticmethod
     def isotope_turnover_2pt(background, initratio, finalratio, elapsedhours):
@@ -441,10 +444,17 @@ class DLWSubject:
     def save_results_csv(self, filename):
         """ Save the results to a csv file
             :param: filename(string), the name of the file to which to save"""
-        write_header = 'subject_id,rCO2_mol/day,rCO2_L/day,EE_kcal/day,EE_MJ/day'
+        write_header = ('subject_id,kd_hr,ko_hr,Nd_plat_avg_mol,No_plat_avg_mol, TBW_avg_kg,FFM_kg,FM_kg,body_fat_%,'
+                        'rCO2_int_mol/day,rCO2_int_L/day,EE_int_kcal/day,EE_int_MJ/day,'
+                        'rCO2_plat_mol/day,rCO2_plat_L/day,EE_plat_kcal/day,EE_plat_MJ/day'
+                        '2H_plateau_%,18O_plateau_%,DS_ratio,EE_consistency_check,ko/kd')
         write_data = np.asarray(
-            [[self.subject_id, self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_hr,
-              self.schoeller_tee_int_kcal_day, self.schoeller_tee_int_mj_day]])
+            [[self.subject_id, self. kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
+              self.total_body_water_ave_kg, self.fat_free_mass_kg, self.fat_mass_kg, self.body_fat_percent,
+              self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_hr, self.schoeller_tee_int_kcal_day,
+              self.schoeller_tee_int_mj_day, self.schoeller_co2_plat_mol_day, self.schoeller_co2_plat_L_hr,
+              self.schoeller_tee_plat_kcal_day, self.schoeller_tee_plat_mj_day,self.d_ratio_percent,
+              self.o18_ratio_percent,self.dil_space_ratio,self.ee_check, self.ko_kd_ratio]])
         if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
             file = open(filename, 'a+')
             np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")
