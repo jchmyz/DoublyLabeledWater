@@ -217,7 +217,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             results_rco2_ee.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.rco2_ee.rco2_l_hr[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.rco2_ee.rco2_l_hr[1] + " L/hour"}</p>
+                    <p className="result-value">{this.state.results.rco2_ee.rco2_l_hr[1] + " L/day"}</p>
                 </div>);
             results_rco2_ee.push(
                 <div className='result-pair'>

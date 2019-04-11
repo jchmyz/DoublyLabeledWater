@@ -43,7 +43,7 @@ def calculate_from_inputs():
         },
         "rco2_ee": {
             "rco2_mol_day": ["rCO2 (mol/day)", round(CALCULATED_RESULTS.schoeller_co2_int_mol_day, 4)],
-            "rco2_l_hr": ["rCO2 (L/hour)", round(CALCULATED_RESULTS.schoeller_co2_int_L_hr, 4)],
+            "rco2_l_hr": ["rCO2 (L/day)", round(CALCULATED_RESULTS.schoeller_co2_int_L_day, 4)],
             "ee_kcal_day": ["EE (kcal/day)", round(CALCULATED_RESULTS.schoeller_tee_int_kcal_day, 5)],
             "ee_mj_day": ["EE (MJ/day)", round(CALCULATED_RESULTS.schoeller_tee_int_mj_day, 4)]
         },
