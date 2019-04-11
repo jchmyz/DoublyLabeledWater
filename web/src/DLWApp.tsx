@@ -4,23 +4,23 @@ import {
     FormGroup,
     NumericInput,
     Button, Toaster, Position,
-    InputGroup, Alignment, Tag, FileInput, Dialog, Checkbox, Radio, RadioGroup
+    InputGroup, Alignment, Tag, FileInput, Dialog, Checkbox, Radio, RadioGroup, Intent
 } from "@blueprintjs/core";
 import * as DateTimePicker from 'react-datetime';
 import * as moment from 'moment';
 import {calculate_from_inputs, export_to_csv} from "./Requests";
 import {FormEvent, RefObject} from "react";
 import {Card, Icon, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@blueprintjs/core/lib/cjs";
-import {ScatterChart, CartesianGrid, Scatter, YAxis, XAxis, Tooltip} from 'recharts';
 import {NumberInput} from "./NumberInput";
 import convert_string_to_moment from "./utilities";
+import {DeltaScatterChart} from "./DeltaScatterChart";
 
 const DEUTERIUM = "Deuterium";
 const OXYGEN = "Oxygen 18";
 const ELEMENTS = [DEUTERIUM, OXYGEN];
 
 const NUM_SAMPLE_TIMES = 5;
-const SAMPLE_LABELS = ['Background', 'PD4', 'PD5', 'ED4', 'ED5'];
+export const SAMPLE_LABELS = ['Background', 'PD4', 'PD5', 'ED4', 'ED5'];
 
 
 export interface Results {
@@ -270,22 +270,9 @@ export class DLWApp extends React.Component<any, DLWState> {
                 chart_data_d_meas.push({x: i, y: this.state.deuterium_deltas[i]});
                 chart_data_o18_meas.push({x: i, y: this.state.oxygen_deltas[i]});
             }
-
-            console.log('data is', chart_data_d_meas, chart_data_o18_meas);
             let deltas_chart: JSX.Element = (
-                <ScatterChart height={300} width={600} margin={{top: 20, right: 40, bottom: 20, left: 40}}>
-                    <CartesianGrid/>
-                    <XAxis type="number" dataKey="x" name="Time of Collection" label="Time of Collection"
-                           domain={[-0.5, 4.5]} ticks={SAMPLE_LABELS}/>
-                    <YAxis yAxisId="left" type="number" dataKey="y" name="Measured 2H" label="Measured 2H"
-                           domain={[-200, 900]} unit={this.state.delta_units} ticks={[-200, 0, 200, 400, 600, 800]}/>
-                    <YAxis yAxisId="right" type="number" dataKey="y" name="Measured O18" label="Measured O18"
-                           domain={[-200, 900]} unit={this.state.delta_units} orientation="right"
-                           ticks={[-200, 0, 200, 400, 600, 800]}/>
-                    <Tooltip cursor={{strokeDasharray: '3 3'}}/>
-                    <Scatter yAxisId="left" name="Measured 2H" data={chart_data_d_meas} fill="#8884d8"/>
-                    <Scatter yAxisId="right" name="Measured O18" data={chart_data_o18_meas} fill="#82ca9d"/>
-                </ScatterChart>
+                <DeltaScatterChart delta_units={this.state.delta_units}
+                                   chart_data_d_meas={chart_data_d_meas} chart_data_o18_meas={chart_data_o18_meas}/>
             );
             results_display = (
                 <div className='results-display' ref={this.scroll_anchor_ref}>
@@ -351,7 +338,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                                         placeholder='ID' value={this.state.subject_id}/>
                         </div>
                         <div>
-                            <Button className='clear-button' onClick={this.clear}>CLEAR INPUTS</Button>
+                            <Button className='clear-button' onClick={this.clear}>CLEAR
+                                INPUTS</Button>
                         </div>
                     </div>
                     <div className='load-from-csv'>
@@ -409,7 +397,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                                          change_function={this.handle_subject_weight_change} unit={'kg'}
                                          value={this.state.subject_weights[1]}/>
                         </div>
-                        <Button className='calculate-button' onClick={this.submit_inputs}
+                        <Button className='calculate-button' onClick={this.submit_inputs} intent={Intent.SUCCESS}
                                 disabled={!all_inputs_validated}>CALCULATE RESULTS</Button>
                     </div>
                     <div className='submit-group'>
@@ -425,7 +413,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                                        onInputChange={this.handle_csv_append_choice} className='csv-input'/>
                         </div>
                         <Button onClick={this.export} disabled={!(this.state.results.calculations && (this.state.new_csv_name || this.state.append_csv_name))}
-                                className='export-button'>EXPORT TO CSV</Button>
+                                className='export-button' intent={Intent.SUCCESS}>EXPORT TO CSV</Button>
                     </div>
                     {results_display}
                 </FormGroup>
