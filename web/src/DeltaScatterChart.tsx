@@ -30,8 +30,8 @@ export class DeltaScatterChart extends React.Component<DeltaScatterChartProps> {
                        ticks={[0, 1, 2, 3, 4]} interval={0}/>
                 <YAxis yAxisId="2H" type="number" dataKey="y" name="Measured 2H" domain={[-200, 1000]}
                        unit={' ' + this.props.delta_units} ticks={[0, 200, 400, 600, 800]}/>
-                <YAxis yAxisId="O18" type="number" dataKey="y" name="Measured O18" domain={[-200, 1000]} hide={true}
-                       unit={' ' + this.props.delta_units}/>
+                <YAxis yAxisId="O18" type="number" dataKey="y" name="Measured O18" domain={[-25, 125]}
+                       ticks={[0, 25, 50, 75, 100]} unit={' ' + this.props.delta_units} orientation="right"/>
                 <Tooltip formatter={(value) => {
                     return typeof value === "number" ? SAMPLE_LABELS[value] : value;
                 }}/>
