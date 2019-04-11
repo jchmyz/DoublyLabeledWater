@@ -453,7 +453,7 @@ class DLWSubject:
         write_data = np.asarray(
             [[self.subject_id, self.kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
               self.total_body_water_ave_kg, self.fat_free_mass_kg, self.fat_mass_kg, self.body_fat_percent,
-              self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_hr, self.schoeller_tee_int_kcal_day,
+              self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int_kcal_day,
               self.schoeller_tee_int_mj_day, self.schoeller_co2_plat_mol_day, self.schoeller_co2_plat_L_hr,
               self.schoeller_tee_plat_kcal_day, self.schoeller_tee_plat_mj_day, self.d_ratio_percent,
               self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
