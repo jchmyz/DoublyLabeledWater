@@ -170,10 +170,12 @@ class DLWSubject:
             self.schoeller_co2_plat = self.calc_schoeller_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
                                                               self.kd_per_hr, self.ko_per_hr)
             self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY  # rco2 mols/day
-            self.schoeller_co2_int_L_hr = self.schoeller_co2_int * LITERS_PER_MOL  # r2co2 l/day
+            self.schoeller_co2_int_L_hr = self.schoeller_co2_int * LITERS_PER_MOL
+            self.schoeller_co2_int_L_day = self.schoeller_co2_int_L_hr * HOURS_PER_DAY  # r2co2 l/day
 
             self.schoeller_co2_plat_mol_day = self.schoeller_co2_plat * HOURS_PER_DAY
             self.schoeller_co2_plat_L_hr = self.schoeller_co2_plat * LITERS_PER_MOL
+            self.schoeller_co2_plat_L_day = self.schoeller_co2_plat_L_hr * HOURS_PER_DAY
 
             self.schoeller_tee_int_kcal_day = self.co2_to_tee(self.schoeller_co2_int)
             self.schoeller_tee_plat_kcal_day = self.co2_to_tee(self.schoeller_co2_plat)
