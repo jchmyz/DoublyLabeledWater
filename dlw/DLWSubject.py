@@ -83,24 +83,22 @@ class DLWSubject:
            fat_free_mass_kg (float): fat free mass of the subject, in kg
            fat_mass_kg (float): fat mass of the subject, in kg
            body_fat_percent (float): body fat percent of the subject, in percent
-           schoeller_co2_int (float): CO2 production rate in mol/hr using the equation of Schoeller (equation A6, 1986
-                              as updated in 1988) using the weight adjusted, average, intercept dilution spaces
-           schoeller_co2_plat (float): CO2 production rate in mol/hr using the equation of Schoeller (equation A6, 1986
-                              as updated in 1988) using the weight adjusted, average, plateu dilution spaces
-           schoeller_co2_int_mol_day (float): CO2 production rate in mol/day using the equation of Schoeller (equation
-                            A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
-           schoeller_co2_int_L_hr (float): CO2 production rate in L/hr using the equation of Schoeller (equation
-                            A6, 1986 as updated in 1988) using the weight adjusted, average, intercept dilution spaces
-           schoeller_tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
+           schoeller (dict): dictionary containing all the values calculated using the equation of Schoeller (equation
+                            A6, 1986 as updated in 1988)
+                co2_int (float): CO2 production rate in mol/hr using the weight adjusted, average, intercept dilution spaces
+                co2_plat (float): CO2 production rate in mol/hr using the weight adjusted, average, plateu dilution spaces
+                co2_int_mol_day (float): CO2 production rate in mol/day using the weight adjusted, average, intercept dilution spaces
+                co2_int_L_hr (float): CO2 production rate in L/hr using the weight adjusted, average, intercept dilution spaces
+                tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
                             values calculated via Schoeller and the weight adjusted, average, intercept dilution spaces,
                             in kcal/day
-           schoeller_tee_plat_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
+                tee_plat_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
                               values calculated via Schoeller and the weight adjusted, average, plateau dilution spaces,
                               in kcal/day
-           schoeller_tee_int_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                tee_int_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
                             co2 values calculated via Schoeller and the weight adjusted, average, intercept dilution
                             spaces, in mj/day
-           schoeller_tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
                             co2 values calculated via Schoeller and the weight adjusted, average, plateau dilution
                             spaces, in mj/day
            d_ratio_percent (float): Percent difference between the 4hr and 5hr delta measurements of deuterium
@@ -165,23 +163,7 @@ class DLWSubject:
             self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg
             self.body_fat_percent = self.fat_mass_kg / self.subject_weights[0] * 100
 
-            self.schoeller_co2_int = self.calc_schoeller_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
-                                                             self.kd_per_hr, self.ko_per_hr)
-            self.schoeller_co2_plat = self.calc_schoeller_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
-                                                              self.kd_per_hr, self.ko_per_hr)
-            self.schoeller_co2_int_mol_day = self.schoeller_co2_int * HOURS_PER_DAY  # rco2 mols/day
-            self.schoeller_co2_int_L_hr = self.schoeller_co2_int * LITERS_PER_MOL
-            self.schoeller_co2_int_L_day = self.schoeller_co2_int_L_hr * HOURS_PER_DAY  # r2co2 l/day
-
-            self.schoeller_co2_plat_mol_day = self.schoeller_co2_plat * HOURS_PER_DAY
-            self.schoeller_co2_plat_L_hr = self.schoeller_co2_plat * LITERS_PER_MOL
-            self.schoeller_co2_plat_L_day = self.schoeller_co2_plat_L_hr * HOURS_PER_DAY
-
-            self.schoeller_tee_int_kcal_day = self.co2_to_tee(self.schoeller_co2_int)
-            self.schoeller_tee_plat_kcal_day = self.co2_to_tee(self.schoeller_co2_plat)
-
-            self.schoeller_tee_int_mj_day = self.schoeller_tee_int_kcal_day * MJ_PER_KCAL
-            self.schoeller_tee_plat_mj_day = self.schoeller_tee_plat_kcal_day * MJ_PER_KCAL
+            self.schoeller = self.calculate_schoeller(self)
 
             self.d_ratio_percent = self.percent_difference(self.d_ratios[1] - self.d_ratios[0],
                                                            self.d_ratios[2] - self.d_ratios[0])
@@ -395,6 +377,33 @@ class DLWSubject:
         return adj_dilution_space
 
     @staticmethod
+    def calculate_schoeller(self):
+        """Calculate the various rCO2 and TEE values using the equation of Schoeller (equation A6, 1986 as updated
+            in 1988)
+            :return dict of co2 and tee values from the Schoeller equation
+        """
+        schoeller = {}
+        schoeller['co2_int'] = self.calc_schoeller_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
+                                                         self.kd_per_hr, self.ko_per_hr)
+        schoeller['co2_plat'] = self.calc_schoeller_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
+                                                          self.kd_per_hr, self.ko_per_hr)
+        schoeller['co2_int_mol_day'] = schoeller['co2_int'] * HOURS_PER_DAY  # rco2 mols/day
+        schoeller['co2_int_L_hr'] = schoeller['co2_int'] * LITERS_PER_MOL
+        schoeller['co2_int_L_day'] = schoeller['co2_int_L_hr'] * HOURS_PER_DAY  # rco2 l/day
+
+        schoeller['co2_plat_mol_day'] = schoeller['co2_plat'] * HOURS_PER_DAY
+        schoeller['co2_plat_L_hr'] = schoeller['co2_plat'] * LITERS_PER_MOL
+        schoeller['co2_plat_L_day'] = schoeller['co2_plat_L_hr'] * HOURS_PER_DAY
+
+        schoeller['tee_int_kcal_day'] = self.co2_to_tee(schoeller['co2_int'])
+        schoeller['tee_plat_kcal_day'] = self.co2_to_tee(schoeller['co2_plat'])
+
+        schoeller['tee_int_mj_day'] = schoeller['tee_int_kcal_day'] * MJ_PER_KCAL
+        schoeller['tee_plat_mj_day'] = schoeller['tee_plat_kcal_day'] * MJ_PER_KCAL
+
+        return schoeller
+
+    @staticmethod
     def calc_schoeller_co2(nd, no, kd, ko):
         """Calculate CO2 production in mol/hr using the equation of Schoeller (equation A6, 1986 as updated in 1988)
                 from dilution spaces and isotope turnover rates.
@@ -453,9 +462,9 @@ class DLWSubject:
         write_data = np.asarray(
             [[self.subject_id, self.kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
               self.total_body_water_ave_kg, self.fat_free_mass_kg, self.fat_mass_kg, self.body_fat_percent,
-              self.schoeller_co2_int_mol_day, self.schoeller_co2_int_L_day, self.schoeller_tee_int_kcal_day,
-              self.schoeller_tee_int_mj_day, self.schoeller_co2_plat_mol_day, self.schoeller_co2_plat_L_hr,
-              self.schoeller_tee_plat_kcal_day, self.schoeller_tee_plat_mj_day, self.d_ratio_percent,
+              self.schoeller['co2_int_mol_day'], self.schoeller['co2_int_L_day'], self.schoeller['tee_int_kcal_day'],
+              self.schoeller['tee_int_mj_day'], self.schoeller['co2_plat_mol_day'], self.schoeller['co2_plat_L_hr'],
+              self.schoeller['tee_plat_kcal_day'], self.schoeller['tee_plat_mj_day'], self.d_ratio_percent,
               self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
         if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
             file = open(filename, 'a+')
