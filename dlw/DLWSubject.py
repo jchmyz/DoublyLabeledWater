@@ -32,7 +32,8 @@ class DLWSubject:
            o18_meas (np.array): oxygen 18 values as measured (can be in permil or ppm)
            d_deltas (np.array): deuterium delta values of subject samples
            o18_deltas (np.array): oxygen 18 delta values of subject samples
-           sample_datetimes ([datetime]): dates and times of sample collections
+           sample_datetimes ([datetime]): dates and times of sample collections and dose
+                                        should be in order of background, dose, PD4, PD5, ED4, ED5
            dose_weights ([float]): weights in g of doses administered, deuterium first, 18O second
            mixed_dose ([bool]): boolean indicating whether doses are mixed together or separate
            mol_masses ([float]): molecular masses in g/mol of doses administered, deuterium first, 18O second
@@ -122,8 +123,7 @@ class DLWSubject:
            :param subject_id ([string]): string identifier for the data
            :param in_permil ([bool]): True if measured d and O18 are in permil, false if they are in ppm
         """
-        if len(d_meas) == len(o18_meas) == len(sample_datetimes) == 5:
-            # how to test that dates are in order?
+        if len(d_meas) == len(o18_meas) == len(sample_datetimes)-1 == 5:
 
             self.sample_datetimes = sample_datetimes
             self.dose_weights = dose_weights
@@ -235,16 +235,16 @@ class DLWSubject:
            :return: average isotope turnover rate in 1/hr"""
         turnovers = np.zeros(4)
 
-        elapsedhours = (timedelta.total_seconds(sampledatetime[3] - sampledatetime[1])) / 3600
+        elapsedhours = (timedelta.total_seconds(sampledatetime[4] - sampledatetime[2])) / 3600
         turnovers[0] = self.isotope_turnover_2pt(ratios[0], ratios[1], ratios[3], elapsedhours)
 
-        elapsedhours = (timedelta.total_seconds(sampledatetime[4] - sampledatetime[1])) / 3600
+        elapsedhours = (timedelta.total_seconds(sampledatetime[5] - sampledatetime[2])) / 3600
         turnovers[1] = self.isotope_turnover_2pt(ratios[0], ratios[1], ratios[4], elapsedhours)
 
-        elapsedhours = (timedelta.total_seconds(sampledatetime[3] - sampledatetime[2])) / 3600
+        elapsedhours = (timedelta.total_seconds(sampledatetime[4] - sampledatetime[3])) / 3600
         turnovers[2] = self.isotope_turnover_2pt(ratios[0], ratios[2], ratios[3], elapsedhours)
 
-        elapsedhours = (timedelta.total_seconds(sampledatetime[4] - sampledatetime[2])) / 3600
+        elapsedhours = (timedelta.total_seconds(sampledatetime[5] - sampledatetime[3])) / 3600
         turnovers[3] = self.isotope_turnover_2pt(ratios[0], ratios[2], ratios[4], elapsedhours)
         return np.mean(turnovers)
 
@@ -281,11 +281,11 @@ class DLWSubject:
                                                          self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
         nd['plat_avg_mol'] = (nd['plat_4hr_mol'] + nd['plat_5hr_mol']) / 2
 
-        dosetime = timedelta.total_seconds(self.sample_datetimes[1] - self.sample_datetimes[0]) / 3600
+        dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[1]) / 3600
         nd['int_4hr_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
                                                           self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0],
                                                           self.kd_per_hr, dosetime)
-        dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[0]) / 3600
+        dosetime = timedelta.total_seconds(self.sample_datetimes[3] - self.sample_datetimes[1]) / 3600
         nd['int_5hr_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
                                                           self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0],
                                                           self.kd_per_hr, dosetime)
@@ -311,11 +311,11 @@ class DLWSubject:
                                                          self.o18_ratios[0])
         no['plat_avg_mol'] = (no['plat_4hr_mol'] + no['plat_5hr_mol']) / 2
 
-        dosetime = timedelta.total_seconds(self.sample_datetimes[1] - self.sample_datetimes[0]) / 3600
+        dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[1]) / 3600
         no['int_4hr_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
                                                           self.dose_enrichments[1], self.o18_ratios[1],
                                                           self.o18_ratios[0], self.ko_per_hr, dosetime)
-        dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[0]) / 3600
+        dosetime = timedelta.total_seconds(self.sample_datetimes[3] - self.sample_datetimes[1]) / 3600
         no['int_5hr_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
                                                           self.dose_enrichments[1], self.o18_ratios[2],
                                                           self.o18_ratios[0], self.ko_per_hr, dosetime)
@@ -426,11 +426,11 @@ class DLWSubject:
         """Calculate the percentage difference between the energy expenditure measured using the PD4/ED4 pair and
             the PD5/ED5 pair
             :return: percentage differences"""
-        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[3] - self.sample_datetimes[1])) / 3600
+        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[4] - self.sample_datetimes[2])) / 3600
         kd_4hr = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[1], self.d_ratios[3], elapsedhours)
         ko_4hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[1], self.o18_ratios[3], elapsedhours)
 
-        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[4] - self.sample_datetimes[2])) / 3600
+        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[5] - self.sample_datetimes[3])) / 3600
         kd_5hr = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
         ko_5hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
 

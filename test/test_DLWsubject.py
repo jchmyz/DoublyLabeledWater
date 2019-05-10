@@ -12,12 +12,13 @@ O18_PPM_TEST = np.array([1989.190483, 2218.619452, 2223.002819, 2063.842074, 206
 
 D_RATIOS_TEST = np.array([0.000143857, 0.000276023, 0.000278450, 0.000193472, 0.000193476])
 O18_RATIOS_TEST = np.array([0.001989190, 0.002218619, 0.002223003, 0.002063842, 0.002063559])
+BACKGROUND_TEST = datetime.datetime(2014, 2, 24, 6, 45)
 DOSE_TEST = datetime.datetime(2014, 2, 24, 7, 00)  # year, month, day, hours, minutes
 PD4_TEST = datetime.datetime(2014, 2, 24, 11, 00)
 PD5_TEST = datetime.datetime(2014, 2, 24, 12, 00)
 ED4_TEST = datetime.datetime(2014, 3, 3, 11, 00)
 ED5_TEST = datetime.datetime(2014, 3, 3, 11, 58)
-SAMPLE_DATETIME_TEST = [DOSE_TEST, PD4_TEST, PD5_TEST, ED4_TEST, ED5_TEST]
+SAMPLE_DATETIME_TEST = [BACKGROUND_TEST, DOSE_TEST, PD4_TEST, PD5_TEST, ED4_TEST, ED5_TEST]
 DOSE_WEIGHTS_TEST = [4.957, 8.649]
 MIXED_DOSE_TEST = False
 # MOL_MASSES_TEST = [19.9960, 19.9000]
@@ -27,7 +28,7 @@ SUBJECT_ID_TEST = "TestSubject"
 
 INCORRECT_RATIOS_TEST = np.array([-62.281, 742.928, 243.613, 739.377, 242.038])
 INCORRECT_SIZE_TEST = np.array([-62.281, 742.928, 243.613, 739.377])
-INCORRECT_DATES_TEST = [DOSE_TEST, PD4_TEST, PD5_TEST, PD4_TEST, ED5_TEST]
+INCORRECT_DATES_TEST = [BACKGROUND_TEST, DOSE_TEST, PD4_TEST, PD5_TEST, PD4_TEST, ED5_TEST]
 
 
 class TestDLWSubject(TestCase):
@@ -70,14 +71,12 @@ class TestDLWSubject(TestCase):
         test_subject = dlw.DLWSubject(D_PPM_TEST, O18_PPM_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST,
                                       False)
-        print(D_DELTAS_TEST, test_subject.d_deltas)
         self.assertTrue(np.allclose(D_DELTAS_TEST, test_subject.d_deltas))
 
     def test_o18_ratios_to_deltas(self):
         test_subject = dlw.DLWSubject(D_PPM_TEST, O18_PPM_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST,
                                       False)
-        print(O18_DELTAS_TEST, test_subject.o18_deltas)
         self.assertTrue(np.allclose(O18_DELTAS_TEST, test_subject.o18_deltas))
 
     def test_average_turnover_2pt(self):
