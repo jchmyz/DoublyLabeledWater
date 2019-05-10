@@ -96,11 +96,11 @@ class TestDLWSubject(TestCase):
     def test_calculate_various_nd(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
-        self.assertAlmostEqual(1871.02702742, test_subject.nd['plat_4hr_mol'])
-        self.assertAlmostEqual(1837.28529309, test_subject.nd['plat_5hr_mol'])
+        self.assertAlmostEqual(1871.02702742, test_subject.nd['plat_a_mol'])
+        self.assertAlmostEqual(1837.28529309, test_subject.nd['plat_b_mol'])
         self.assertAlmostEqual(1854.15616026, test_subject.nd['plat_avg_mol'])
-        self.assertAlmostEqual(1827.47891022, test_subject.nd['int_4hr_mol'])
-        self.assertAlmostEqual(1783.98809916, test_subject.nd['int_5hr_mol'])
+        self.assertAlmostEqual(1827.47891022, test_subject.nd['int_a_mol'])
+        self.assertAlmostEqual(1783.98809916, test_subject.nd['int_b_mol'])
         self.assertAlmostEqual(1805.73350469, test_subject.nd['int_avg_mol'])
         self.assertAlmostEqual(1841.71633362, test_subject.nd['adj_plat_avg_mol'])
         self.assertAlmostEqual(1793.61855330, test_subject.nd['adj_int_avg_mol'])
@@ -110,11 +110,11 @@ class TestDLWSubject(TestCase):
     def test_calculate_various_no(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
-        self.assertAlmostEqual(1795.41951937, test_subject.no['plat_4hr_mol'])
-        self.assertAlmostEqual(1761.75197101, test_subject.no['plat_5hr_mol'])
+        self.assertAlmostEqual(1795.41951937, test_subject.no['plat_a_mol'])
+        self.assertAlmostEqual(1761.75197101, test_subject.no['plat_b_mol'])
         self.assertAlmostEqual(1778.58574519, test_subject.no['plat_avg_mol'])
-        self.assertAlmostEqual(1747.56869702, test_subject.no['int_4hr_mol'])
-        self.assertAlmostEqual(1703.25659004, test_subject.no['int_5hr_mol'])
+        self.assertAlmostEqual(1747.56869702, test_subject.no['int_a_mol'])
+        self.assertAlmostEqual(1703.25659004, test_subject.no['int_b_mol'])
         self.assertAlmostEqual(1725.41264353, test_subject.no['int_avg_mol'])
         self.assertAlmostEqual(1766.65293241, test_subject.no['adj_plat_avg_mol'])
         self.assertAlmostEqual(1713.83657749, test_subject.no['adj_int_avg_mol'])
