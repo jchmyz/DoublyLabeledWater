@@ -47,12 +47,12 @@ class DLWSubject:
            ko_per_hr (float): oxygen turnover rate in 1/hr
            ko_kd_ratio (float): ratio of oxygen and deuterium turnover rates
            nd (dict): dictionary containing all the calculated values of the deuterium dilution space
-                plat_4hr_mol (float): calculated by the plateau method using the 4hr sample in mol
-                plat_5hr_mol (float): calculated by the plateau method using the 5hr sample in mol
-                plat_avg_mol (float): the average of the 4hr and 5hr plateau dilution spaces in mol
-                int_4hr_mol (float): calculated by the intercept method using the 4hr sample in mol
-                int_5hr_mol (float): calculated by the intercept method using the 5hr sample in mol
-                int_avg_mol (float): the average of the 4hr and 5hr intercept dilution spaces in mol
+                plat_a_mol (float): calculated by the plateau method using the a sample in mol
+                plat_b_mol (float): calculated by the plateau method using the b sample in mol
+                plat_avg_mol (float): the average of the a and b plateau dilution spaces in mol
+                int_a_mol (float): calculated by the intercept method using the a sample in mol
+                int_b_mol (float): calculated by the intercept method using the b sample in mol
+                int_avg_mol (float): the average of the a and b intercept dilution spaces in mol
                 adj_plat_avg_mol (float): average plateau dilution space adjusted for the subject weight change over
                            the sampling period, in mol
                 adj_int_avg_mol (float): average intercept dilution space adjusted for the subject weight change over
@@ -62,12 +62,12 @@ class DLWSubject:
                 adj_int_avg_kg (float): average intercept dilution space adjusted for the subject weight change over
                            the sampling period, in kg
            no (dict): dictionary containing all the calculated values of the oxygen 18 dilution space
-                plat_4hr_mol (float): calculated by the plateau method using the 4hr sample in mol
-                plat_5hr_mol (float): calculated by the plateau method using the 5hr sample in mol
-                plat_avg_mol (float): the average of the 4hr and 5hr plateau dilution spaces in mol
-                int_4hr_mol (float): calculated by the intercept method using the 4hr sample in mol
-                int_5hr_mol (float): calculated by the intercept method using the 5hr sample in mol
-                int_avg_mol (float): the average of the 4hr and 5hr intercept dilution spaces in mol
+                plat_a_mol (float): calculated by the plateau method using the a sample in mol
+                plat_b_mol (float): calculated by the plateau method using the b sample in mol
+                plat_avg_mol (float): the average of the a and b plateau dilution spaces in mol
+                int_a_mol (float): calculated by the intercept method using the a sample in mol
+                int_b_mol (float): calculated by the intercept method using the b sample in mol
+                int_avg_mol (float): the average of the a and b intercept dilution spaces in mol
                 adj_plat_avg_mol (float): average plateau dilution space adjusted for the subject weight change over
                            the sampling period, in mol
                 adj_int_avg_mol (float): average intercept dilution space adjusted for the subject weight change over
@@ -101,8 +101,25 @@ class DLWSubject:
                 tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
                             co2 values calculated via Schoeller and the weight adjusted, average, plateau dilution
                             spaces, in mj/day
-           d_ratio_percent (float): Percent difference between the 4hr and 5hr delta measurements of deuterium
-           o18_ratio_percent (float): Percent difference between the 4hr and 5hr delta measurements of 18O
+            racette (dict): dictionary containing all the values calculated using the equation of Racette (1994)
+                co2_int (float): CO2 production rate in mol/hr using the weight adjusted, average, intercept dilution spaces
+                co2_plat (float): CO2 production rate in mol/hr using the weight adjusted, average, plateu dilution spaces
+                co2_int_mol_day (float): CO2 production rate in mol/day using the weight adjusted, average, intercept dilution spaces
+                co2_int_L_hr (float): CO2 production rate in L/hr using the weight adjusted, average, intercept dilution spaces
+                tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
+                            values calculated via Racette and the weight adjusted, average, intercept dilution spaces,
+                            in kcal/day
+                tee_plat_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
+                              values calculated via Racette and the weight adjusted, average, plateau dilution spaces,
+                              in kcal/day
+                tee_int_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                            co2 values calculated via Racette and the weight adjusted, average, intercept dilution
+                            spaces, in mj/day
+                tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                            co2 values calculated via Racette and the weight adjusted, average, plateau dilution
+                            spaces, in mj/day
+           d_ratio_percent (float): Percent difference between the a and b delta measurements of deuterium
+           o18_ratio_percent (float): Percent difference between the a and b delta measurements of 18O
            ee_check (float): Data quality check consisting of the percent difference between the TEE (in kcal/day)
                             calculated using the PD4/ED4 pair and the TEE calculated using the PD5/ED5 pair, both with
                             the plateau method.
@@ -150,7 +167,7 @@ class DLWSubject:
             self.nd = self.calculate_various_nd(self)
             self.no = self.calculate_various_no(self)
 
-            self.dil_space_ratio = self.nd['plat_4hr_mol'] / self.no['plat_4hr_mol']  # dilution space ratio err flag
+            self.dil_space_ratio = self.nd['plat_a_mol'] / self.no['plat_a_mol']  # dilution space ratio err flag
 
             # self.rh2o = (self.nd['adj_plat_avg_kg'] * self.kd_per_hr * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
 
@@ -164,6 +181,7 @@ class DLWSubject:
             self.body_fat_percent = self.fat_mass_kg / self.subject_weights[0] * 100
 
             self.schoeller = self.calculate_schoeller(self)
+            self.racette = self.calculate_racette(self)
 
             self.d_ratio_percent = self.percent_difference(self.d_ratios[1] - self.d_ratios[0],
                                                            self.d_ratios[2] - self.d_ratios[0])
@@ -257,21 +275,21 @@ class DLWSubject:
             :return: dict of dilution spaces for deuterium"""
 
         nd = {}
-        nd['plat_4hr_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
+        nd['plat_a_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
                                                          self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0])
-        nd['plat_5hr_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
+        nd['plat_b_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
                                                          self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
-        nd['plat_avg_mol'] = (nd['plat_4hr_mol'] + nd['plat_5hr_mol']) / 2
+        nd['plat_avg_mol'] = (nd['plat_a_mol'] + nd['plat_b_mol']) / 2
 
         dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[1]) / 3600
-        nd['int_4hr_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
+        nd['int_a_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
                                                           self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0],
                                                           self.kd_per_hr, dosetime)
         dosetime = timedelta.total_seconds(self.sample_datetimes[3] - self.sample_datetimes[1]) / 3600
-        nd['int_5hr_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
+        nd['int_b_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
                                                           self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0],
                                                           self.kd_per_hr, dosetime)
-        nd['int_avg_mol'] = (nd['int_4hr_mol'] + nd['int_5hr_mol']) / 2
+        nd['int_avg_mol'] = (nd['int_a_mol'] + nd['int_b_mol']) / 2
 
         nd['adj_plat_avg_mol'] = self.adj_dilution_space(nd['plat_avg_mol'], self.subject_weights)
         nd['adj_int_avg_mol'] = self.adj_dilution_space(nd['int_avg_mol'], self.subject_weights)
@@ -285,23 +303,23 @@ class DLWSubject:
             :return: dict of dilution spaces for deuterium"""
 
         no = {}
-        no['plat_4hr_mol'] = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
+        no['plat_a_mol'] = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
                                                          self.dose_enrichments[1], self.o18_ratios[1],
                                                          self.o18_ratios[0])
-        no['plat_5hr_mol'] = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
+        no['plat_b_mol'] = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
                                                          self.dose_enrichments[1], self.o18_ratios[2],
                                                          self.o18_ratios[0])
-        no['plat_avg_mol'] = (no['plat_4hr_mol'] + no['plat_5hr_mol']) / 2
+        no['plat_avg_mol'] = (no['plat_a_mol'] + no['plat_b_mol']) / 2
 
         dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[1]) / 3600
-        no['int_4hr_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
+        no['int_a_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
                                                           self.dose_enrichments[1], self.o18_ratios[1],
                                                           self.o18_ratios[0], self.ko_per_hr, dosetime)
         dosetime = timedelta.total_seconds(self.sample_datetimes[3] - self.sample_datetimes[1]) / 3600
-        no['int_5hr_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
+        no['int_b_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
                                                           self.dose_enrichments[1], self.o18_ratios[2],
                                                           self.o18_ratios[0], self.ko_per_hr, dosetime)
-        no['int_avg_mol'] = (no['int_4hr_mol'] + no['int_5hr_mol']) / 2
+        no['int_avg_mol'] = (no['int_a_mol'] + no['int_b_mol']) / 2
 
         no['adj_plat_avg_mol'] = self.adj_dilution_space(no['plat_avg_mol'], self.subject_weights)
         no['adj_int_avg_mol'] = self.adj_dilution_space(no['int_avg_mol'], self.subject_weights)
@@ -387,19 +405,8 @@ class DLWSubject:
                                                          self.kd_per_hr, self.ko_per_hr)
         schoeller['co2_plat'] = self.calc_schoeller_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
                                                           self.kd_per_hr, self.ko_per_hr)
-        schoeller['co2_int_mol_day'] = schoeller['co2_int'] * HOURS_PER_DAY  # rco2 mols/day
-        schoeller['co2_int_L_hr'] = schoeller['co2_int'] * LITERS_PER_MOL
-        schoeller['co2_int_L_day'] = schoeller['co2_int_L_hr'] * HOURS_PER_DAY  # rco2 l/day
-
-        schoeller['co2_plat_mol_day'] = schoeller['co2_plat'] * HOURS_PER_DAY
-        schoeller['co2_plat_L_hr'] = schoeller['co2_plat'] * LITERS_PER_MOL
-        schoeller['co2_plat_L_day'] = schoeller['co2_plat_L_hr'] * HOURS_PER_DAY
-
-        schoeller['tee_int_kcal_day'] = self.co2_to_tee(schoeller['co2_int'])
-        schoeller['tee_plat_kcal_day'] = self.co2_to_tee(schoeller['co2_plat'])
-
-        schoeller['tee_int_mj_day'] = schoeller['tee_int_kcal_day'] * MJ_PER_KCAL
-        schoeller['tee_plat_mj_day'] = schoeller['tee_plat_kcal_day'] * MJ_PER_KCAL
+        schoeller = self.change_units_co2(schoeller)
+        schoeller = self.tee_calcs(self, schoeller)
 
         return schoeller
 
@@ -419,12 +426,74 @@ class DLWSubject:
         return co2_prod
 
     @staticmethod
+    def calculate_racette(self):
+        """Calculate the various rCO2 and TEE values using the equation of Racette (1994)
+            :return dict of co2 and tee values from the Racette equation
+        """
+        racette = {}
+        racette['co2_int'] = self.calc_racette_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
+                                                         self.kd_per_hr, self.ko_per_hr)
+        racette['co2_plat'] = self.calc_racette_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
+                                                          self.kd_per_hr, self.ko_per_hr)
+        racette = self.change_units_co2(racette)
+        racette = self.tee_calcs(self, racette)
+
+        print('racette co2_plat', racette['co2_plat'])
+        return racette
+
+    @staticmethod
+    def calc_racette_co2(nd, no, kd, ko):
+        """Calculate CO2 production in mol/hr using the equation of Racette (1994)
+                from dilution spaces and isotope turnover rates.
+           :param nd: deuterium dilution space in mol
+           :param no: oxygen dilution space in mol
+           :param kd: deuterium turnover rate in 1/hr
+           :param ko: oxygen turnover rate in 1/hr
+           :return co2prod: co2 production rate in mol/hr
+        """
+        avg_rdil = 1.02
+        r_dil = (avg_rdil+1.034)/2
+        n = ((no / 1.01) + (nd / (1.01 *r_dil))) / 2
+        co2_prod = (n / 2.078) * (1.01 * ko - 1.01 * kd * r_dil) - 0.0245 * n * 1.05 * (1.01 * ko - 1.01 * kd * r_dil)
+        return co2_prod
+
+    @staticmethod
+    def change_units_co2(equation):
+        """Change the units on the co2 calculations.
+            :param equation: dict with 'co2_int' and 'co2_plat' already calculated in mol/hr
+            :return equation: dict now containing co2 in other units"""
+
+        equation['co2_int_mol_day'] = equation['co2_int'] * HOURS_PER_DAY  # rco2 mols/day
+        equation['co2_int_L_hr'] = equation['co2_int'] * LITERS_PER_MOL
+        equation['co2_int_L_day'] = equation['co2_int_L_hr'] * HOURS_PER_DAY  # rco2 l/day
+
+        equation['co2_plat_mol_day'] = equation['co2_plat'] * HOURS_PER_DAY
+        equation['co2_plat_L_hr'] = equation['co2_plat'] * LITERS_PER_MOL
+        equation['co2_plat_L_day'] = equation['co2_plat_L_hr'] * HOURS_PER_DAY
+
+        return equation
+
+    @staticmethod
     def co2_to_tee(co2):
         """Convert CO2 production to total energy expenditure in using the equation of Weir, J.B. J Physiol., 109(1-2):1-9, 1949
            :param co2: volume of co2 production in mol/hr
            :return: total energy expenditure in kcal/day
         """
         return co2 * LITERS_PER_MOL * HOURS_PER_DAY * WEIR_CONSTANT
+
+    @staticmethod
+    def tee_calcs (self, equation):
+        """Change the units on the tee calculations.
+                    :param equation: dict with co2 previously calculated
+                    :return equation: dict now containing tee measurements"""
+
+        equation['tee_int_kcal_day'] = self.co2_to_tee(equation['co2_int'])
+        equation['tee_plat_kcal_day'] = self.co2_to_tee(equation['co2_plat'])
+
+        equation['tee_int_mj_day'] = equation['tee_int_kcal_day'] * MJ_PER_KCAL
+        equation['tee_plat_mj_day'] = equation['tee_plat_kcal_day'] * MJ_PER_KCAL
+
+        return equation
 
     @staticmethod
     def percent_difference(first, second):
@@ -436,20 +505,20 @@ class DLWSubject:
             the PD5/ED5 pair
             :return: percentage differences"""
         elapsedhours = (timedelta.total_seconds(self.sample_datetimes[4] - self.sample_datetimes[2])) / 3600
-        kd_4hr = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[1], self.d_ratios[3], elapsedhours)
-        ko_4hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[1], self.o18_ratios[3], elapsedhours)
+        kd_a = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[1], self.d_ratios[3], elapsedhours)
+        ko_a = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[1], self.o18_ratios[3], elapsedhours)
 
         elapsedhours = (timedelta.total_seconds(self.sample_datetimes[5] - self.sample_datetimes[3])) / 3600
-        kd_5hr = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
-        ko_5hr = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
+        kd_b = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
+        ko_b = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
 
-        schoeller_4hr = self.calc_schoeller_co2(self.nd['int_4hr_mol'], self.no['int_4hr_mol'], kd_4hr, ko_4hr)
-        schoeller_5hr = self.calc_schoeller_co2(self.nd['int_5hr_mol'], self.no['int_5hr_mol'], kd_5hr, ko_5hr)
+        schoeller_a = self.calc_schoeller_co2(self.nd['int_a_mol'], self.no['int_a_mol'], kd_a, ko_a)
+        schoeller_b = self.calc_schoeller_co2(self.nd['int_b_mol'], self.no['int_b_mol'], kd_b, ko_b)
 
-        tee_4hr = self.co2_to_tee(schoeller_4hr)
-        tee_5hr = self.co2_to_tee(schoeller_5hr)
+        tee_a = self.co2_to_tee(schoeller_a)
+        tee_b = self.co2_to_tee(schoeller_b)
 
-        diff = self.percent_difference(tee_4hr, tee_5hr)
+        diff = self.percent_difference(tee_a, tee_b)
         return diff
 
     def save_results_csv(self, filename):
