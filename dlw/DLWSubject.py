@@ -438,7 +438,6 @@ class DLWSubject:
         racette = self.change_units_co2(racette)
         racette = self.tee_calcs(self, racette)
 
-        print('racette co2_plat', racette['co2_plat'])
         return racette
 
     @staticmethod
