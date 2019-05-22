@@ -124,15 +124,34 @@ class TestDLWSubject(TestCase):
     def test_calculate_schoeller(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
-        self.assertAlmostEqual(13.03150474, test_subject.schoeller['co2_int_mol_day'])
-        self.assertAlmostEqual(12.17033947, test_subject.schoeller['co2_int_L_hr'])
-        self.assertAlmostEqual(7.017890921, test_subject.schoeller['tee_int_mj_day'])
-        self.assertAlmostEqual(7.220010393, test_subject.schoeller['tee_plat_mj_day'])
+        self.assertAlmostEqual(0.542979364, test_subject.schoeller['co2_int'])
 
     def test_calc_schoeller_co2(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(0.558617496, test_subject.schoeller['co2_plat'])
+
+    def test_calculate_racette(self):
+        test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
+        self.assertAlmostEqual(0.556364985, test_subject.racette['co2_int'])
+
+    def test_calc_racette_co2(self):
+        test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
+        self.assertAlmostEqual(0.572387168, test_subject.racette['co2_plat'])
+
+    def test_change_units_co2(self):
+        test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
+        self.assertAlmostEqual(13.03150474, test_subject.schoeller['co2_int_mol_day'])
+        self.assertAlmostEqual(12.17033947, test_subject.schoeller['co2_int_L_hr'])
+
+    def test_tee_calcs(self):
+        test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
+        self.assertAlmostEqual(7.017890921, test_subject.schoeller['tee_int_mj_day'])
+        self.assertAlmostEqual(7.220010393, test_subject.schoeller['tee_plat_mj_day'])
 
     def test_co2_to_tee(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
@@ -159,4 +178,4 @@ class TestDLWSubject(TestCase):
         self.assertAlmostEqual(test_subject.no['plat_avg_mol'], float(read_data[4]))
         self.assertAlmostEqual(test_subject.body_fat_percent, float(read_data[8]))
         self.assertAlmostEqual(test_subject.schoeller['tee_int_kcal_day'], float(read_data[11]))
-        self.assertAlmostEqual(test_subject.ko_kd_ratio, float(read_data[21]))
+        self.assertAlmostEqual(test_subject.ko_kd_ratio, float(read_data[29]))
