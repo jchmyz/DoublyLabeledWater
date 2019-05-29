@@ -201,4 +201,6 @@ class TestDLWSubject(TestCase):
         self.assertAlmostEqual(test_subject.no['plat_avg_mol'], float(read_data[4]))
         self.assertAlmostEqual(test_subject.body_fat_percent, float(read_data[8]))
         self.assertAlmostEqual(test_subject.schoeller['tee_int_kcal_day'], float(read_data[11]))
-        self.assertAlmostEqual(test_subject.ko_kd_ratio, float(read_data[29]))
+        self.assertAlmostEqual(test_subject.racette['tee_int_kcal_day'], float(read_data[19]))
+        self.assertAlmostEqual(test_subject.speakman['tee_int_kcal_day'], float(read_data[27]))
+        self.assertAlmostEqual(test_subject.ko_kd_ratio, float(read_data[37]))

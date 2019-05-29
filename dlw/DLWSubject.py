@@ -156,6 +156,7 @@ class DLWSubject:
            :param subject_weights ([float]): initial and final weights of the subject in kg
            :param subject_id ([string]): string identifier for the data
            :param in_permil ([bool]): True if measured d and O18 are in permil, false if they are in ppm
+           :param pop_avg_rdil ([float]): population average dilution space to use in the calculations
         """
         if len(d_meas) == len(o18_meas) == len(sample_datetimes)-1 == 5:
 
@@ -593,6 +594,8 @@ class DLWSubject:
                         'sch_rCO2_plat_mol/day,sch_rCO2_plat_L/day,sch_EE_plat_kcal/day,sch_EE_plat_MJ/day,'
                         'rac_rCO2_int_mol/day,rac_rCO2_int_L/day,rac_EE_int_kcal/day,rac_EE_int_MJ/day,'
                         'rac_rCO2_plat_mol/day,rac_rCO2_plat_L/day,rac_EE_plat_kcal/day,rac_EE_plat_MJ/day,'
+                        'spk_rCO2_int_mol/day,spk_rCO2_int_L/day,spk_EE_int_kcal/day,spk_EE_int_MJ/day,'
+                        'spk_rCO2_plat_mol/day,spk_rCO2_plat_L/day,spk_EE_plat_kcal/day,spk_EE_plat_MJ/day,'
                         '2H_plateau_%,18O_plateau_%,DS_ratio,EE_consistency_check,ko/kd')
         write_data = np.asarray(
             [[self.subject_id, self.kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
@@ -602,7 +605,10 @@ class DLWSubject:
               self.schoeller['tee_plat_kcal_day'], self.schoeller['tee_plat_mj_day'],
               self.racette['co2_int_mol_day'], self.racette['co2_int_L_day'], self.racette['tee_int_kcal_day'],
               self.racette['tee_int_mj_day'], self.racette['co2_plat_mol_day'], self.racette['co2_plat_L_hr'],
-              self.racette['tee_plat_kcal_day'], self.racette['tee_plat_mj_day'], self.d_ratio_percent,
+              self.racette['tee_plat_kcal_day'], self.racette['tee_plat_mj_day'],
+              self.speakman['co2_int_mol_day'], self.speakman['co2_int_L_day'], self.speakman['tee_int_kcal_day'],
+              self.speakman['tee_int_mj_day'], self.speakman['co2_plat_mol_day'], self.speakman['co2_plat_L_hr'],
+              self.speakman['tee_plat_kcal_day'], self.speakman['tee_plat_mj_day'], self.d_ratio_percent,
               self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
         if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
             file = open(filename, 'a+')
