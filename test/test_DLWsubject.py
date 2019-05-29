@@ -25,6 +25,7 @@ MIXED_DOSE_TEST = False
 DOSE_ENRICHMENTS_TEST = [998000, 950000]
 SUBJECT_WEIGHTS_TEST = [59.62, 58.82]
 SUBJECT_ID_TEST = "TestSubject"
+POP_AVG_RDIL_TEST = 1.03
 
 INCORRECT_RATIOS_TEST = np.array([-62.281, 742.928, 243.613, 739.377, 242.038])
 INCORRECT_SIZE_TEST = np.array([-62.281, 742.928, 243.613, 739.377])
@@ -146,6 +147,12 @@ class TestDLWSubject(TestCase):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(0.559617317, test_subject.speakman['co2_int'])
+
+    def test_pop_avg_rdil_incorporation(self):
+        test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST,
+                                      pop_avg_rdil = POP_AVG_RDIL_TEST)
+        self.assertAlmostEqual(0.50729412, test_subject.speakman['co2_int'])
 
     def test_calc_speakman_co2(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
