@@ -88,7 +88,7 @@ class DLWSubject:
            schoeller (dict): dictionary containing all the values calculated using the equation of Schoeller (equation
                             A6, 1986 as updated in 1988)
                 co2_int (float): CO2 production rate in mol/hr using the weight adjusted, average, intercept dilution spaces
-                co2_plat (float): CO2 production rate in mol/hr using the weight adjusted, average, plateu dilution spaces
+                co2_plat (float): CO2 production rate in mol/hr using the weight adjusted, average, plateau dilution spaces
                 co2_int_mol_day (float): CO2 production rate in mol/day using the weight adjusted, average, intercept dilution spaces
                 co2_int_L_hr (float): CO2 production rate in L/hr using the weight adjusted, average, intercept dilution spaces
                 tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
@@ -103,9 +103,9 @@ class DLWSubject:
                 tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
                             co2 values calculated via Schoeller and the weight adjusted, average, plateau dilution
                             spaces, in mj/day
-            racette (dict): dictionary containing all the values calculated using the equation of Racette (1994)
+            racette (dict): dictionary containing all the values calculated using the equation of Racette, eqn 1 (1994)
                 co2_int (float): CO2 production rate in mol/hr using the weight adjusted, average, intercept dilution spaces
-                co2_plat (float): CO2 production rate in mol/hr using the weight adjusted, average, plateu dilution spaces
+                co2_plat (float): CO2 production rate in mol/hr using the weight adjusted, average, plateau dilution spaces
                 co2_int_mol_day (float): CO2 production rate in mol/day using the weight adjusted, average, intercept dilution spaces
                 co2_int_L_hr (float): CO2 production rate in L/hr using the weight adjusted, average, intercept dilution spaces
                 tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
@@ -119,6 +119,23 @@ class DLWSubject:
                             spaces, in mj/day
                 tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
                             co2 values calculated via Racette and the weight adjusted, average, plateau dilution
+                            spaces, in mj/day
+            speakman (dict): dictionary containing all the values calculated using the equation of Speakman, eqn 17.41 (1997)
+                co2_int (float): CO2 production rate in mol/hr using the weight adjusted, average, intercept dilution spaces
+                co2_plat (float): CO2 production rate in mol/hr using the weight adjusted, average, plateau dilution spaces
+                co2_int_mol_day (float): CO2 production rate in mol/day using the weight adjusted, average, intercept dilution spaces
+                co2_int_L_hr (float): CO2 production rate in L/hr using the weight adjusted, average, intercept dilution spaces
+                tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
+                            values calculated via Speakman and the weight adjusted, average, intercept dilution spaces,
+                            in kcal/day
+                tee_plat_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
+                              values calculated via Speakman and the weight adjusted, average, plateau dilution spaces,
+                              in kcal/day
+                tee_int_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                            co2 values calculated via Speakman and the weight adjusted, average, intercept dilution
+                            spaces, in mj/day
+                tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                            co2 values calculated via Speakman and the weight adjusted, average, plateau dilution
                             spaces, in mj/day
            d_ratio_percent (float): Percent difference between the a and b delta measurements of deuterium
            o18_ratio_percent (float): Percent difference between the a and b delta measurements of 18O
@@ -189,6 +206,7 @@ class DLWSubject:
 
             self.schoeller = self.calculate_schoeller(self)
             self.racette = self.calculate_racette(self)
+            self.speakman = self.calculate_speakman(self)
 
             self.d_ratio_percent = self.percent_difference(self.d_ratios[1] - self.d_ratios[0],
                                                            self.d_ratios[2] - self.d_ratios[0])
@@ -468,6 +486,35 @@ class DLWSubject:
         r_dil = (pop_avg_rdil+1.034)/2
         n = ((no / 1.01) + (nd / (1.01 *r_dil))) / 2
         co2_prod = (n / 2.078) * (1.01 * ko - 1.01 * kd * r_dil) - 0.0245 * n * 1.05 * (1.01 * ko - 1.01 * kd * r_dil)
+        return co2_prod
+
+    @staticmethod
+    def calculate_speakman(self):
+        """Calculate the various rCO2 and TEE values using the equation of Speakman eqn 17.41 (1997)
+            :return dict of co2 and tee values from the Speakman equation
+        """
+        speakman = {}
+        speakman['co2_int'] = self.calc_speakman_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
+                                                   self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
+        speakman['co2_plat'] = self.calc_speakman_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
+                                                    self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
+        speakman = self.change_units_co2(speakman)
+        speakman = self.tee_calcs(self, speakman)
+
+        return speakman
+
+    @staticmethod
+    def calc_speakman_co2(nd, no, kd, ko, pop_avg_rdil):
+        """Calculate CO2 production in mol/hr using the equation of Speakman eqn 17.41 (1997)
+                from dilution spaces and isotope turnover rates.
+           :param nd: deuterium dilution space in mol
+           :param no: oxygen dilution space in mol
+           :param kd: deuterium turnover rate in 1/hr
+           :param ko: oxygen turnover rate in 1/hr
+           :return co2prod: co2 production rate in mol/hr
+        """
+        n = (no + (nd / pop_avg_rdil)) / 2
+        co2_prod = (n / 2.078) * (ko - kd * pop_avg_rdil) - (0.0062 * n  * kd * pop_avg_rdil)
         return co2_prod
 
     @staticmethod
