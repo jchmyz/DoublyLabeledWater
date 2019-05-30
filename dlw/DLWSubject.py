@@ -301,7 +301,6 @@ class DLWSubject:
 
         return mol_masses
 
-    @staticmethod
     def calculate_various_nd(self):
         """Calculate the various dilution spaces for nd.
             :return: dict of dilution spaces for deuterium
@@ -330,7 +329,6 @@ class DLWSubject:
         nd['adj_int_avg_kg'] = nd['adj_int_avg_mol'] * STANDARD_WATER_MOL_MASS
         return nd
 
-    @staticmethod
     def calculate_various_no(self):
         """Calculate the various dilution spaces for nd.
             :return: dict of dilution spaces for deuterium
@@ -428,7 +426,6 @@ class DLWSubject:
         adj_dilution_space = ((begin_dilution_spacekg + end_dilution_spacekg) / 2) / STANDARD_WATER_MOL_MASS
         return adj_dilution_space
 
-    @staticmethod
     def calculate_schoeller(self):
         """Calculate the various rCO2 and TEE values using the equation of Schoeller (equation A6, 1986 as updated
             in 1988)
@@ -459,7 +456,6 @@ class DLWSubject:
         # reduces to co2prod = n*(0.459952*ko_per_hr - 0.47362*kd_per_hr)
         return co2_prod
 
-    @staticmethod
     def calculate_racette(self):
         """Calculate the various rCO2 and TEE values using the equation of Racette (1994)
             :return dict of co2 and tee values from the Racette equation
@@ -489,7 +485,6 @@ class DLWSubject:
         co2_prod = (n / 2.078) * (1.01 * ko - 1.01 * kd * r_dil) - 0.0245 * n * 1.05 * (1.01 * ko - 1.01 * kd * r_dil)
         return co2_prod
 
-    @staticmethod
     def calculate_speakman(self):
         """Calculate the various rCO2 and TEE values using the equation of Speakman eqn 17.41 (1997)
             :return dict of co2 and tee values from the Speakman equation
@@ -543,7 +538,6 @@ class DLWSubject:
         """
         return co2 * LITERS_PER_MOL * HOURS_PER_DAY * WEIR_CONSTANT
 
-    @staticmethod
     def tee_calcs (self, equation):
         """Change the units on the tee calculations.
            :param equation: dict with co2 previously calculated

@@ -80,7 +80,7 @@ class TestDLWSubject(TestCase):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST)
         self.assertAlmostEqual(0.00588674101, test_subject.kd_per_hr)
-        self.assertAlmostEqual(0.006751644 , test_subject.ko_per_hr)
+        self.assertAlmostEqual(0.006751644, test_subject.ko_per_hr)
 
     def test_incorrect_ratios(self):
         with self.assertRaises(ValueError) as context:
@@ -151,7 +151,7 @@ class TestDLWSubject(TestCase):
     def test_pop_avg_rdil_incorporation(self):
         test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
                                       MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST,
-                                      pop_avg_rdil = POP_AVG_RDIL_TEST)
+                                      pop_avg_rdil=POP_AVG_RDIL_TEST)
         self.assertAlmostEqual(0.50729412, test_subject.speakman['co2_int'])
 
     def test_calc_speakman_co2(self):
