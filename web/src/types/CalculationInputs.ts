@@ -52,5 +52,6 @@ export interface LoadedCSVInputs {
     subject_weight_initial: string,
     subject_weight_final: string,
     subject_id: string,
+    pop_dilution_space_ratio: string,
     in_permil?: string
 }

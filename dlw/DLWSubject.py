@@ -189,8 +189,8 @@ class DLWSubject:
 
             self.mol_masses = self.calculate_mol_masses(self.dose_enrichments, self.mixed_dose)
 
-            self.nd = self.calculate_various_nd(self)
-            self.no = self.calculate_various_no(self)
+            self.nd = self.calculate_various_nd()
+            self.no = self.calculate_various_no()
 
             self.dil_space_ratio = self.nd['plat_a_mol'] / self.no['plat_a_mol']  # dilution space ratio err flag
 
@@ -205,9 +205,9 @@ class DLWSubject:
             self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg
             self.body_fat_percent = self.fat_mass_kg / self.subject_weights[0] * 100
 
-            self.schoeller = self.calculate_schoeller(self)
-            self.racette = self.calculate_racette(self)
-            self.speakman = self.calculate_speakman(self)
+            self.schoeller = self.calculate_schoeller()
+            self.racette = self.calculate_racette()
+            self.speakman = self.calculate_speakman()
 
             self.d_ratio_percent = self.percent_difference(self.d_ratios[1] - self.d_ratios[0],
                                                            self.d_ratios[2] - self.d_ratios[0])
@@ -437,7 +437,7 @@ class DLWSubject:
         schoeller['co2_plat'] = self.calc_schoeller_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
                                                           self.kd_per_hr, self.ko_per_hr)
         schoeller = self.change_units_co2(schoeller)
-        schoeller = self.tee_calcs(self, schoeller)
+        schoeller = self.tee_calcs(schoeller)
 
         return schoeller
 
@@ -466,7 +466,7 @@ class DLWSubject:
         racette['co2_plat'] = self.calc_racette_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
                                                           self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
         racette = self.change_units_co2(racette)
-        racette = self.tee_calcs(self, racette)
+        racette = self.tee_calcs(racette)
 
         return racette
 
@@ -495,7 +495,7 @@ class DLWSubject:
         speakman['co2_plat'] = self.calc_speakman_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
                                                     self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
         speakman = self.change_units_co2(speakman)
-        speakman = self.tee_calcs(self, speakman)
+        speakman = self.tee_calcs(speakman)
 
         return speakman
 

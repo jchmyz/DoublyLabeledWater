@@ -14,7 +14,6 @@ import {Card, Icon, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@bl
 import {NumberInput} from "./NumberInput";
 import convert_string_to_moment from "./utilities";
 import {DeltaScatterChart} from "./DeltaScatterChart";
-import {EXPECTED_CSV_FIELDS, LoadedCSVInputs} from "./types/CalculationInputs";
 
 const DEUTERIUM = "Deuterium";
 const OXYGEN = "Oxygen 18";
@@ -33,25 +32,34 @@ interface RCO2_RESULTS {
 }
 
 export interface Results {
-    calculations: {
-        ndp_kg: string[],
-        kd_hr: string[],
-        nop_kg: string[],
-        ko_hr: string[],
-        body_water_avg_kg: string[],
-        fat_free_mass_kg: string[],
-        fat_mass_kg: string[],
-        body_fat_percentage: string[]
-    } | null,
-    schoeller: {
-        rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
-    } | null
-    error_flags: {
-        plateau_2h: string[],
-        plateau_180: string[],
-        ds_ratio: string[],
-        ee: string[],
-        ko_kd: string[]
+    results: {
+        calculations: {
+            ndp_kg: string[],
+            kd_hr: string[],
+            nop_kg: string[],
+            ko_hr: string[],
+            body_water_avg_kg: string[],
+            fat_free_mass_kg: string[],
+            fat_mass_kg: string[],
+            body_fat_percentage: string[]
+        }
+        schoeller: {
+            rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
+        }
+        racette: {
+            rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
+        }
+
+        speakman: {
+            rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
+        }
+        error_flags: {
+            plateau_2h: string[],
+            plateau_180: string[],
+            ds_ratio: string[],
+            ee: string[],
+            ko_kd: string[]
+        }
     } | null
 }
 
@@ -72,6 +80,7 @@ interface DLWState {
     dose_weights: string[],
     dose_enrichments: string[],
     subject_weights: string[],
+    dilution_space_ratio: string
     subject_id: string;
     mixed_dose: boolean;
 
@@ -110,6 +119,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             dose_enrichments: ["", ""],
             mixed_dose: false,
             subject_weights: ["", ""],
+            dilution_space_ratio: "",
             subject_id: "",
 
             deuterium_deltas_validated: false,
@@ -119,7 +129,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             dose_enrichments_validated: false,
             subject_weights_validated: false,
 
-            results: {calculations: null, schoeller: null, error_flags: null},
+            results: {results: null},
             new_csv_name: "", append_csv_name: ""
         };
     }
@@ -176,53 +186,59 @@ export class DLWApp extends React.Component<any, DLWState> {
                              change_function={this.handle_dose_weight_change}/>);
         }
         let results_display: JSX.Element = <div/>;
-        if (this.state.results.calculations && this.state.results.schoeller && this.state.results.error_flags) {
+        if (this.state.results.results) {
             let results_calculations: JSX.Element[] = [];
-            let results_rco2_ee_int: JSX.Element[] = [];
-            let results_rco2_ee_plat: JSX.Element[] = [];
             let results_error_flags: JSX.Element[] = [];
+
+            let results_schoeller_int: JSX.Element[] = [];
+            let results_schoeller_plat: JSX.Element[] = [];
+            let results_racette_int: JSX.Element[] = [];
+            let results_racette_plat: JSX.Element[] = [];
+            let results_speakman_int: JSX.Element[] = [];
+            let results_speakman_plat: JSX.Element[] = [];
+
             results_calculations.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.calculations.ndp_kg[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.calculations.ndp_kg[1] + " kg"}</p>
+                    <p className="result-label">{this.state.results.results.calculations.ndp_kg[0] + ":"}</p>
+                    <p className="result-value">{this.state.results.results.calculations.ndp_kg[1] + " kg"}</p>
                 </div>);
             results_calculations.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.calculations.kd_hr[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.calculations.kd_hr[1]}</p>
+                    <p className="result-label">{this.state.results.results.calculations.kd_hr[0] + ":"}</p>
+                    <p className="result-value">{this.state.results.results.calculations.kd_hr[1]}</p>
                 </div>);
             results_calculations.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.calculations.nop_kg[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.calculations.nop_kg[1] + " kg"}</p>
+                    <p className="result-label">{this.state.results.results.calculations.nop_kg[0] + ":"}</p>
+                    <p className="result-value">{this.state.results.results.calculations.nop_kg[1] + " kg"}</p>
                 </div>);
             results_calculations.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.calculations.ko_hr[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.calculations.ko_hr[1]}</p>
+                    <p className="result-label">{this.state.results.results.calculations.ko_hr[0] + ":"}</p>
+                    <p className="result-value">{this.state.results.results.calculations.ko_hr[1]}</p>
                 </div>);
             results_calculations.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.calculations.body_water_avg_kg[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.calculations.body_water_avg_kg[1] + " kg"}</p>
+                    <p className="result-label">{this.state.results.results.calculations.body_water_avg_kg[0] + ":"}</p>
+                    <p className="result-value">{this.state.results.results.calculations.body_water_avg_kg[1] + " kg"}</p>
                 </div>);
             results_calculations.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.calculations.fat_free_mass_kg[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.calculations.fat_free_mass_kg[1] + " kg"}</p>
+                    <p className="result-label">{this.state.results.results.calculations.fat_free_mass_kg[0] + ":"}</p>
+                    <p className="result-value">{this.state.results.results.calculations.fat_free_mass_kg[1] + " kg"}</p>
                 </div>);
             results_calculations.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.calculations.fat_mass_kg[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.calculations.fat_mass_kg[1] + " kg"}</p>
+                    <p className="result-label">{this.state.results.results.calculations.fat_mass_kg[0] + ":"}</p>
+                    <p className="result-value">{this.state.results.results.calculations.fat_mass_kg[1] + " kg"}</p>
                 </div>);
             results_calculations.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.calculations.body_fat_percentage[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.calculations.body_fat_percentage[1] + "%"}</p>
+                    <p className="result-label">{this.state.results.results.calculations.body_fat_percentage[0] + ":"}</p>
+                    <p className="result-value">{this.state.results.results.calculations.body_fat_percentage[1] + "%"}</p>
                 </div>);
 
-            function push_schoeller_results(element: JSX.Element[], result_set: RCO2_RESULTS) {
+            function push_calculated_results(element: JSX.Element[], result_set: RCO2_RESULTS) {
                 element.push(
                     <div className='result-pair'>
                         <p className="result-label">{result_set.rco2_mol_day[0] + ":"}</p>
@@ -245,42 +261,47 @@ export class DLWApp extends React.Component<any, DLWState> {
                     </div>);
             }
 
-            push_schoeller_results(results_rco2_ee_int, this.state.results.schoeller.rco2_ee_int);
-            push_schoeller_results(results_rco2_ee_plat, this.state.results.schoeller.rco2_ee_plat);
+            push_calculated_results(results_schoeller_int, this.state.results.results.schoeller.rco2_ee_int);
+            push_calculated_results(results_schoeller_plat, this.state.results.results.schoeller.rco2_ee_plat);
+            push_calculated_results(results_racette_int, this.state.results.results.racette.rco2_ee_int);
+            push_calculated_results(results_racette_plat, this.state.results.results.racette.rco2_ee_plat);
+            push_calculated_results(results_speakman_int, this.state.results.results.speakman.rco2_ee_int);
+            push_calculated_results(results_speakman_plat, this.state.results.results.speakman.rco2_ee_plat);
+
 
             let error_okay = "error-okay";
             let outside_error_bars = "error-not-okay";
-            let error_class = ((parseFloat(this.state.results.error_flags.plateau_2h[1]) < 0.05) ? error_okay : outside_error_bars);
+            let error_class = ((parseFloat(this.state.results.results.error_flags.plateau_2h[1]) < 0.05) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.error_flags.plateau_2h[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.error_flags.plateau_2h[1] + '%'}</p>
+                    <p className="result-label">{this.state.results.results.error_flags.plateau_2h[0] + ":"}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_2h[1] + '%'}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.error_flags.plateau_180[1]) < 0.05) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_180[1]) < 0.05) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.error_flags.plateau_180[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.error_flags.plateau_180[1] + '%'}</p>
+                    <p className="result-label">{this.state.results.results.error_flags.plateau_180[0] + ":"}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_180[1] + '%'}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.error_flags.ds_ratio[1]) < 1.070 &&
-                parseFloat(this.state.results.error_flags.ds_ratio[1]) > 1) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.ds_ratio[1]) < 1.070 &&
+                parseFloat(this.state.results.results.error_flags.ds_ratio[1]) > 1) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.error_flags.ds_ratio[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.error_flags.ds_ratio[1]}</p>
+                    <p className="result-label">{this.state.results.results.error_flags.ds_ratio[0] + ":"}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.ds_ratio[1]}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.error_flags.ee[1]) < 10) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.ee[1]) < 10) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.error_flags.ee[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.error_flags.ee[1] + "%"}</p>
+                    <p className="result-label">{this.state.results.results.error_flags.ee[0] + ":"}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.ee[1] + "%"}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.error_flags.ko_kd[1]) < 1.7 &&
-                parseFloat(this.state.results.error_flags.ko_kd[1]) > 1.1) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.ko_kd[1]) < 1.7 &&
+                parseFloat(this.state.results.results.error_flags.ko_kd[1]) > 1.1) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.error_flags.ko_kd[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.error_flags.ko_kd[1]}</p>
+                    <p className="result-label">{this.state.results.results.error_flags.ko_kd[0] + ":"}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.ko_kd[1]}</p>
                 </div>);
             let chart_data_d_meas = [];
             let chart_data_o18_meas = [];
@@ -301,15 +322,34 @@ export class DLWApp extends React.Component<any, DLWState> {
                                 <h5 className='result-header-calc'>Calculations</h5>
                                 {results_calculations}
                             </div>
-                            <div className='result-section'>
-                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
-                                {results_rco2_ee_int}
-                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
-                                {results_rco2_ee_plat}
-                            </div>
-                            <div className='result-section'>
+                            <div className='result-section error-flags'>
                                 <h5 className='result-header-error'>Error Flags</h5>
                                 {results_error_flags}
+                            </div>
+                        </div>
+                    </Card>
+                    <Card className='results-card'>
+                        <div className='result-sections calculation-types'>
+                            <div className='result-section'>
+                                <h2>Schoeller</h2>
+                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
+                                {results_schoeller_int}
+                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
+                                {results_schoeller_plat}
+                            </div>
+                            <div className='result-section'>
+                                <h2>Racette</h2>
+                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
+                                {results_racette_int}
+                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
+                                {results_racette_plat}
+                            </div>
+                            <div className='result-section'>
+                                <h2>Speakman</h2>
+                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
+                                {results_speakman_int}
+                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
+                                {results_speakman_plat}
                             </div>
                         </div>
                     </Card>
@@ -440,6 +480,11 @@ export class DLWApp extends React.Component<any, DLWState> {
                                          change_function={this.handle_subject_weight_change} unit={'kg'}
                                          value={this.state.subject_weights[1]}/>
                         </div>
+                        <div className='inputs-by-element'>
+                            <h5>Population Dilution Space Ratio</h5>
+                            <NumberInput placeholder={"Dilution space ratio"} value={this.state.dilution_space_ratio}
+                                         change_function={this.handle_dilution_space_ratio_change} unit={''} index={0}/>
+                        </div>
                         <Button className='calculate-button' onClick={this.submit_inputs} intent={Intent.SUCCESS}
                                 disabled={!all_inputs_validated}>CALCULATE RESULTS</Button>
                     </div>
@@ -455,7 +500,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <FileInput text={this.state.append_csv_name || "Choose file..."}
                                        onInputChange={this.handle_csv_append_choice} className='csv-input'/>
                         </div>
-                        <Button onClick={this.export} disabled={!(this.state.results.calculations && (this.state.new_csv_name || this.state.append_csv_name))}
+                        <Button onClick={this.export} disabled={!(this.state.results.results && (this.state.new_csv_name || this.state.append_csv_name))}
                                 className='export-button' intent={Intent.SUCCESS}>EXPORT TO CSV</Button>
                     </div>
                     {results_display}
@@ -490,7 +535,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         datetimes.map((value: number[]) => {
             return value.splice(1, 1, value[1] + 1);
         });
-        let results = await calculate_from_inputs(
+        let calculated_results = await calculate_from_inputs(
             {
                 d_meas: this.state.deuterium_deltas,
                 o18_meas: this.state.oxygen_deltas,
@@ -503,15 +548,25 @@ export class DLWApp extends React.Component<any, DLWState> {
                 in_permil: (this.state.delta_units === DeltaUnits.permil)
             }
         );
-        if (results.calculations && results.error_flags && results.schoeller) {
+        if (calculated_results.results) {
             this.setState({
                               results: {
-                                  calculations: results.calculations,
-                                  schoeller: {
-                                      rco2_ee_int: results.schoeller.rco2_ee_int,
-                                      rco2_ee_plat: results.schoeller.rco2_ee_plat,
-                                  },
-                                  error_flags: results.error_flags
+                                  results: {
+                                      calculations: calculated_results.results.calculations,
+                                      schoeller: {
+                                          rco2_ee_int: calculated_results.results.schoeller.rco2_ee_int,
+                                          rco2_ee_plat: calculated_results.results.schoeller.rco2_ee_plat,
+                                      },
+                                      racette: {
+                                          rco2_ee_int: calculated_results.results.racette.rco2_ee_int,
+                                          rco2_ee_plat: calculated_results.results.racette.rco2_ee_plat
+                                      },
+                                      speakman: {
+                                          rco2_ee_int: calculated_results.results.speakman.rco2_ee_int,
+                                          rco2_ee_plat: calculated_results.results.speakman.rco2_ee_plat
+                                      },
+                                      error_flags: calculated_results.results.error_flags
+                                  }
                               }
                           });
             AppToaster.show({
@@ -532,6 +587,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                           dose_weights: ["", ""],
                           dose_enrichments: ["", ""],
                           subject_weights: ["", ""],
+                          dilution_space_ratio: "",
                           subject_id: "",
 
                           deuterium_deltas_validated: false,
@@ -541,14 +597,13 @@ export class DLWApp extends React.Component<any, DLWState> {
                           dose_enrichments_validated: false,
                           subject_weights_validated: false,
 
-                          results: {calculations: null, schoeller: null, error_flags: null},
+                          results: {results: null},
                       });
         // @ts-ignore
         document.getElementById('file-input').value = null;
     };
 
     handle_csv_upload = async (event: FormEvent<HTMLInputElement>) => {
-        console.log('into handle csv upload');
         let file = (event.target as any).files[0];
         if (file.type === "text/csv") {
             let inputs = await load_from_csv(file);
@@ -599,6 +654,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     this.handle_dose_enrichment_change(1, r.dose_enrichment_o);
                     this.handle_subject_weight_change(0, r.subject_weight_initial);
                     this.handle_subject_weight_change(1, r.subject_weight_final);
+                    this.handle_dilution_space_ratio_change(0, r.pop_dilution_space_ratio);
                     this.handle_subject_id_change(r.subject_id);
                 } catch (e) {
                     hit_error = true;
@@ -612,7 +668,6 @@ export class DLWApp extends React.Component<any, DLWState> {
                                         timeout: 0
                                     });
                 } else {
-                    console.log('filename is ', this.state.input_csv_name);
                     AppToaster.show({
                                         message:
                                             "Inputs successfully loaded from ".concat(this.state.input_csv_name),
@@ -856,11 +911,16 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_subject_id_change = (event: FormEvent<HTMLElement> | string) => {
-        if (this.state.results.calculations) {
+        if (this.state.results.results) {
             this.setState({clear_popup_open: true});
         }
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
         this.setState({subject_id: value});
+    };
+
+    handle_dilution_space_ratio_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
+        this.setState({dilution_space_ratio: value});
     }
 
 }
