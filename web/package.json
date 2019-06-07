@@ -13,7 +13,7 @@
   "license": "UNLICENSED",
   "homepage": "https://github.com/jchmyz/DoublyLabeledWater",
   "dependencies": {
-    "@blueprintjs/core": "^3.5.1",
+    "@blueprintjs/core": "^3.15.1",
     "@blueprintjs/datetime": "^3.4.0",
     "@types/react-dom": "^16.8.3",
     "@types/react-easy-chart": "^0.1.4",

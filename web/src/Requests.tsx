@@ -1,14 +1,21 @@
 import * as React from "react";
-import {CalculationInputs} from "./types/CalculationInputs";
+import {CalculationInputs, LoadedCSVInputs} from "./types/CalculationInputs";
 import {Results} from "./DLWApp";
 
-export interface CSVExportResults {
-    saved_file: string
+interface CSVResults {
     error?: boolean
 }
 
+export interface CSVExportResults extends CSVResults {
+    saved_file: string
+}
+
+export interface LoadedCSVResults extends CSVResults {
+    results: LoadedCSVInputs | null
+}
+
 export async function calculate_from_inputs(inputs: CalculationInputs): Promise<Results> {
-     let fetch_args = {
+    let fetch_args = {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -34,6 +41,16 @@ export async function export_to_csv(filename: string): Promise<CSVExportResults>
         return response.json();
     } else {
         return {saved_file: "", error: true};
+    }
+}
+
+export async function load_from_csv(file: File): Promise<LoadedCSVResults> {
+    let fetch_args = {method: 'POST', body: file};
+    let response = await fetch('/load', fetch_args);
+    if (response.ok) {
+        return response.json();
+    } else {
+        return {error: true, results: null};
     }
 }
 

@@ -1,8 +1,8 @@
 import {FormEvent} from "react";
 import * as React from "react";
-import {ControlGroup, InputGroup, Tag, IconName} from "@blueprintjs/core";
+import {ControlGroup, InputGroup, Tag, IconName, IInputGroupProps} from "@blueprintjs/core";
 
-export interface NumberInputProps {
+export interface NumberInputProps extends IInputGroupProps {
     placeholder: string,
     index: number,
     change_function: (index: number, event: FormEvent<HTMLElement>) => void
@@ -27,7 +27,7 @@ export class NumberInput extends React.Component<NumberInputProps> {
                 <InputGroup
                     leftIcon={icon} className={'.bp3-fill'} rightElement={<Tag>{this.props.unit}</Tag>}
                     onChange={(event: FormEvent<HTMLElement>) => this.props.change_function(this.props.index, event)}
-                    placeholder={this.props.placeholder} value={this.props.value}/>
+                    placeholder={this.props.placeholder} value={this.props.value} {...this.props}/>
             </ControlGroup>
         );
     }

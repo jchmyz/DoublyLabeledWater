@@ -23,9 +23,18 @@ body
   display: flex
   flex-direction: row
 
-.mixed-dose-box
-  margin-right: 25px
+.mixed-dose
+  display: flex
   margin-bottom: -25px
+
+  .mixed-dose-box
+    margin-right: 25px
+
+  .mixed-dose-help-button
+    margin-left: -20px
+    margin-bottom: -10px
+    height: 30px
+    margin-top: 20px
 
 .submit-group
   display: flex
@@ -93,6 +102,13 @@ p
 .result-section
   width: 30%
 
+  .chart-title
+    width: 500px
+    margin-top: 0
+    margin-bottom: -10px
+    font-size: 18px
+    text-align: center
+
 .result-pair
   display: flex
   flex-direction: row
@@ -143,3 +159,22 @@ p
 .clear-button
   width: 130px
   margin-top: 19px
+
+.delta-space
+  height: 30px
+
+.help-paragraph
+  margin: 10px
+  font-size: medium
+
+.clear-popover
+  display: flex
+  flex-direction: column
+
+  .popover-button-container
+    display: flex
+    justify-content: space-evenly
+    margin-bottom: 10px
+
+    .popover-button
+      width: 40%

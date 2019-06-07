@@ -8,20 +8,29 @@ import {
 } from "@blueprintjs/core";
 import * as DateTimePicker from 'react-datetime';
 import * as moment from 'moment';
-import {calculate_from_inputs, export_to_csv} from "./Requests";
+import {calculate_from_inputs, export_to_csv, load_from_csv, LoadedCSVResults} from "./Requests";
 import {FormEvent, RefObject} from "react";
 import {Card, Icon, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@blueprintjs/core/lib/cjs";
 import {NumberInput} from "./NumberInput";
 import convert_string_to_moment from "./utilities";
 import {DeltaScatterChart} from "./DeltaScatterChart";
+import {EXPECTED_CSV_FIELDS, LoadedCSVInputs} from "./types/CalculationInputs";
 
 const DEUTERIUM = "Deuterium";
 const OXYGEN = "Oxygen 18";
 const ELEMENTS = [DEUTERIUM, OXYGEN];
 
-const NUM_SAMPLE_TIMES = 5;
-export const SAMPLE_LABELS = ['Background', 'PD4', 'PD5', 'ED4', 'ED5'];
+const NUM_SAMPLE_TIMES = 6;
+const NUM_DELTAS = 5;
+export const DATE_LABELS = ['Background', 'Dose', 'PDA', 'PDB', 'EDA', 'EDB'];
+export const SAMPLE_LABELS = [DATE_LABELS[0]].concat(DATE_LABELS.slice(2, 6));
 
+interface RCO2_RESULTS {
+    rco2_mol_day: string[],
+    rco2_l_hr: string[],
+    ee_kcal_day: string[],
+    ee_mj_day: string[]
+}
 
 export interface Results {
     calculations: {
@@ -34,12 +43,9 @@ export interface Results {
         fat_mass_kg: string[],
         body_fat_percentage: string[]
     } | null,
-    rco2_ee: {
-        rco2_mol_day: string[],
-        rco2_l_hr: string[],
-        ee_kcal_day: string[],
-        ee_mj_day: string[]
-    } | null,
+    schoeller: {
+        rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
+    } | null
     error_flags: {
         plateau_2h: string[],
         plateau_180: string[],
@@ -57,6 +63,7 @@ enum DeltaUnits {
 interface DLWState {
     input_csv_name: string;
     info_overlay_open: boolean;
+    clear_popup_open: boolean;
 
     delta_units: DeltaUnits;
     deuterium_deltas: string[],
@@ -93,11 +100,12 @@ export class DLWApp extends React.Component<any, DLWState> {
         this.state = {
             input_csv_name: "",
             info_overlay_open: false,
+            clear_popup_open: false,
 
             delta_units: DeltaUnits.permil,
             deuterium_deltas: ["", "", "", "", ""],
             oxygen_deltas: ["", "", "", "", ""],
-            datetimes: [this.now, this.now, this.now, this.now, this.now],
+            datetimes: [this.now, this.now, this.now, this.now, this.now, this.now],
             dose_weights: ["", ""],
             dose_enrichments: ["", ""],
             mixed_dose: false,
@@ -111,7 +119,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             dose_enrichments_validated: false,
             subject_weights_validated: false,
 
-            results: {calculations: null, rco2_ee: null, error_flags: null},
+            results: {calculations: null, schoeller: null, error_flags: null},
             new_csv_name: "", append_csv_name: ""
         };
     }
@@ -127,6 +135,17 @@ export class DLWApp extends React.Component<any, DLWState> {
         let oxygen_delta_inputs: JSX.Element[] = [];
         let collection_time_inputs: JSX.Element[] = [];
         for (let i = 0; i < NUM_SAMPLE_TIMES; i++) {
+            collection_time_inputs.push(
+                <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
+                                inputProps={{
+                                    className: 'date-input-box .bp3-input',
+                                    placeholder: ' ' + DATE_LABELS[i] + ' sample date and time',
+                                    value: (this.state.datetimes[i] === this.now) ? "" : this.state.datetimes[i].format('YYYY-MM-DD HH:mm')
+                                }}
+                                key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
+            );
+        }
+        for (let i = 0; i < NUM_DELTAS; i++) {
             deuterium_delta_inputs.push(
                 <NumberInput placeholder={SAMPLE_LABELS[i] + " Deuterium delta"} index={i} key={i}
                              change_function={this.handle_deuterium_delta_change} unit={this.state.delta_units}
@@ -134,16 +153,9 @@ export class DLWApp extends React.Component<any, DLWState> {
             oxygen_delta_inputs.push(
                 <NumberInput placeholder={SAMPLE_LABELS[i] + ' Oxygen 18 delta'} index={i} key={i} unit={this.state.delta_units}
                              change_function={this.handle_oxygen_delta_change} value={this.state.oxygen_deltas[i]}/>);
-            collection_time_inputs.push(
-                <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
-                                inputProps={{
-                                    className: 'date-input-box .bp3-input',
-                                    placeholder: ' ' + SAMPLE_LABELS[i] + ' sample date and time',
-                                    value: (this.state.datetimes[i] === this.now) ? "" : this.state.datetimes[i].format('YYYY-MM-DD HH:mm')
-                                }}
-                                key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
-            );
         }
+        deuterium_delta_inputs.splice(1, 0, <div className='delta-space'/>);
+        oxygen_delta_inputs.splice(1, 0, <div className='delta-space'/>);
 
         let dose_weight_inputs: JSX.Element[] = [];
         let dose_enrichment_inputs: JSX.Element[] = [];
@@ -164,9 +176,10 @@ export class DLWApp extends React.Component<any, DLWState> {
                              change_function={this.handle_dose_weight_change}/>);
         }
         let results_display: JSX.Element = <div/>;
-        if (this.state.results.calculations && this.state.results.rco2_ee && this.state.results.error_flags) {
+        if (this.state.results.calculations && this.state.results.schoeller && this.state.results.error_flags) {
             let results_calculations: JSX.Element[] = [];
-            let results_rco2_ee: JSX.Element[] = [];
+            let results_rco2_ee_int: JSX.Element[] = [];
+            let results_rco2_ee_plat: JSX.Element[] = [];
             let results_error_flags: JSX.Element[] = [];
             results_calculations.push(
                 <div className='result-pair'>
@@ -209,40 +222,45 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <p className="result-value">{this.state.results.calculations.body_fat_percentage[1] + "%"}</p>
                 </div>);
 
-            results_rco2_ee.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.rco2_ee.rco2_mol_day[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.rco2_ee.rco2_mol_day[1] + " mol/day"}</p>
-                </div>);
-            results_rco2_ee.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.rco2_ee.rco2_l_hr[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.rco2_ee.rco2_l_hr[1] + " L/day"}</p>
-                </div>);
-            results_rco2_ee.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.rco2_ee.ee_kcal_day[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.rco2_ee.ee_kcal_day[1] + " kcal/day"}</p>
-                </div>);
-            results_rco2_ee.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.rco2_ee.ee_mj_day[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.rco2_ee.ee_mj_day[1] + " MJ/day"}</p>
-                </div>);
+            function push_schoeller_results(element: JSX.Element[], result_set: RCO2_RESULTS) {
+                element.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result_set.rco2_mol_day[0] + ":"}</p>
+                        <p className="result-value">{result_set.rco2_mol_day[1] + " mol/day"}</p>
+                    </div>);
+                element.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result_set.rco2_l_hr[0] + ":"}</p>
+                        <p className="result-value">{result_set.rco2_l_hr[1] + " L/day"}</p>
+                    </div>);
+                element.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result_set.ee_kcal_day[0] + ":"}</p>
+                        <p className="result-value">{result_set.ee_kcal_day[1] + " kcal/day"}</p>
+                    </div>);
+                element.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result_set.ee_mj_day[0] + ":"}</p>
+                        <p className="result-value">{result_set.ee_mj_day[1] + " MJ/day"}</p>
+                    </div>);
+            }
+
+            push_schoeller_results(results_rco2_ee_int, this.state.results.schoeller.rco2_ee_int);
+            push_schoeller_results(results_rco2_ee_plat, this.state.results.schoeller.rco2_ee_plat);
 
             let error_okay = "error-okay";
-            let outside_error_bars = "error_not_okay";
+            let outside_error_bars = "error-not-okay";
             let error_class = ((parseFloat(this.state.results.error_flags.plateau_2h[1]) < 0.05) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.error_flags.plateau_2h[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.error_flags.plateau_2h[1]}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.error_flags.plateau_2h[1] + '%'}</p>
                 </div>);
             error_class = ((parseFloat(this.state.results.error_flags.plateau_180[1]) < 0.05) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.error_flags.plateau_180[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.error_flags.plateau_180[1]}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.error_flags.plateau_180[1] + '%'}</p>
                 </div>);
             error_class = ((parseFloat(this.state.results.error_flags.ds_ratio[1]) < 1.070 &&
                 parseFloat(this.state.results.error_flags.ds_ratio[1]) > 1) ? error_okay : outside_error_bars);
@@ -285,7 +303,9 @@ export class DLWApp extends React.Component<any, DLWState> {
                             </div>
                             <div className='result-section'>
                                 <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
-                                {results_rco2_ee}
+                                {results_rco2_ee_int}
+                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
+                                {results_rco2_ee_plat}
                             </div>
                             <div className='result-section'>
                                 <h5 className='result-header-error'>Error Flags</h5>
@@ -296,6 +316,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <Card className='results-card'>
                         <div className='result-sections'>
                             <div className='result-section'>
+                                <h5 className='chart-title'>Deuterium/O18 Measured Enrichments</h5>
                                 {deltas_chart}
                             </div>
                         </div>
@@ -312,7 +333,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                             this.setState({info_overlay_open: false})
                         }}
                         title={'How to use the Doubly Labeled Water App'}>
-                    <p>some helpful text- include CSV formatting</p>
+                    <p className='help-paragraph'>Mixed Dose: If checked, enter 18O and 2H enrichments of the dose as
+                        measured <strong>after</strong> mixing.</p>
                 </Dialog>
                 <NavbarGroup align={Alignment.LEFT}>
                     <Navbar.Heading className='dlw-title'>Doubly Labeled Water</Navbar.Heading>
@@ -332,20 +354,36 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <div className='subject-clear'>
                         <div>
                             <h5>Subject ID</h5>
-                            <InputGroup leftIcon={(this.state.subject_id ? "tick" : "circle-arrow-right")}
-                                        className={'.bp3-fill subject-id'}
-                                        onChange={(event: FormEvent<HTMLElement>) => this.setState({subject_id: (event.target as any).value})}
-                                        placeholder='ID' value={this.state.subject_id}/>
+                            <Popover isOpen={this.state.clear_popup_open} position="right"
+                                     content={
+                                         <div className='clear-popover'>
+                                             <p className='help-paragraph'>Entering a new subject ID. Clear data
+                                                 inputs?</p>
+                                             <div className='popover-button-container'>
+                                                 <Button className='popover-button' onClick={this.clear}>CLEAR
+                                                     INPUTS</Button>
+                                                 <Button className='popover-button'
+                                                         onClick={() => this.setState({clear_popup_open: false})}
+                                                 >KEEP INPUTS</Button>
+                                             </div>
+                                         </div>}>
+                                <InputGroup leftIcon={(this.state.subject_id ? "tick" : "circle-arrow-right")}
+                                            className={'.bp3-fill subject-id'} onChange={this.handle_subject_id_change}
+                                            placeholder='ID' value={this.state.subject_id}/>
+                            </Popover>
                         </div>
                         <div>
-                            <Button className='clear-button' onClick={this.clear}>CLEAR
-                                INPUTS</Button>
+                            <Button className='clear-button' onClick={this.clear}>CLEAR INPUTS</Button>
                         </div>
                     </div>
                     <div className='load-from-csv'>
                         <h5>Load input data from .csv file</h5>
                         <FileInput text={this.state.input_csv_name || "Choose file..."}
-                                   onInputChange={this.handle_csv_upload} disabled={!!(this.state.input_csv_name)}/>
+                                   inputProps={{
+                                       'accept': '.csv',
+                                       'id': 'file-input'
+                                   }} onInputChange={this.handle_csv_upload}
+                                   disabled={!!(this.state.input_csv_name)}/>
                     </div>
                     <div className='samples'>
                         <div className='date-inputs'>
@@ -370,20 +408,25 @@ export class DLWApp extends React.Component<any, DLWState> {
                         </div>
                     </div>
                     <div className='element-wise-inputs'>
-                        <div className='mixed-dose-box'>
-                            <Checkbox checked={this.state.mixed_dose} labelElement={<h5>Mixed Dose</h5>} large={true}
-                                      onChange={() => {
-                                          this.setState({mixed_dose: !this.state.mixed_dose})
-                                      }} alignIndicator={Alignment.RIGHT}/>
+                        <div className='mixed-dose'>
+                            <div className='mixed-dose-box'>
+                                <Checkbox checked={this.state.mixed_dose} labelElement={<h5>Mixed
+                                    Dose</h5>} large={true}
+                                          onChange={() => {
+                                              this.setState({mixed_dose: !this.state.mixed_dose})
+                                          }} alignIndicator={Alignment.RIGHT}/>
+                            </div>
+                            <Button icon="help" minimal={true} className='mixed-dose-help-button'
+                                    onClick={() => this.setState({info_overlay_open: true})}/>
                         </div>
                     </div>
                     <div className='element-wise-inputs'>
                         <div className='inputs-by-element'>
-                            <h5>Dose Weights</h5>
+                            <h5>{((this.state.mixed_dose) ? 'Dose Weight' : 'Dose Weights')}</h5>
                             {dose_weight_inputs}
                         </div>
                         <div className='inputs-by-element'>
-                            <h5>Dose Enrichments</h5>
+                            <h5>{((this.state.mixed_dose) ? 'Mixed Dose Enrichments' : 'Dose Enrichments')}</h5>
                             {dose_enrichment_inputs}
                         </div>
                     </div>
@@ -418,7 +461,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                     {results_display}
                 </FormGroup>
             </Navbar>
-        );
+        )
+            ;
     }
 
     export = async () => {
@@ -459,11 +503,14 @@ export class DLWApp extends React.Component<any, DLWState> {
                 in_permil: (this.state.delta_units === DeltaUnits.permil)
             }
         );
-        if (results.calculations && results.error_flags && results.rco2_ee) {
+        if (results.calculations && results.error_flags && results.schoeller) {
             this.setState({
                               results: {
                                   calculations: results.calculations,
-                                  rco2_ee: results.rco2_ee,
+                                  schoeller: {
+                                      rco2_ee_int: results.schoeller.rco2_ee_int,
+                                      rco2_ee_plat: results.schoeller.rco2_ee_plat,
+                                  },
                                   error_flags: results.error_flags
                               }
                           });
@@ -476,10 +523,12 @@ export class DLWApp extends React.Component<any, DLWState> {
 
     clear = () => {
         this.setState({
+                          clear_popup_open: false,
+
                           input_csv_name: "",
                           deuterium_deltas: ["", "", "", "", ""],
                           oxygen_deltas: ["", "", "", "", ""],
-                          datetimes: [this.now, this.now, this.now, this.now, this.now],
+                          datetimes: [this.now, this.now, this.now, this.now, this.now, this.now],
                           dose_weights: ["", ""],
                           dose_enrichments: ["", ""],
                           subject_weights: ["", ""],
@@ -492,18 +541,86 @@ export class DLWApp extends React.Component<any, DLWState> {
                           dose_enrichments_validated: false,
                           subject_weights_validated: false,
 
-                          results: {calculations: null, rco2_ee: null, error_flags: null},
+                          results: {calculations: null, schoeller: null, error_flags: null},
                       });
+        // @ts-ignore
+        document.getElementById('file-input').value = null;
     };
 
     handle_csv_upload = async (event: FormEvent<HTMLInputElement>) => {
+        console.log('into handle csv upload');
         let file = (event.target as any).files[0];
         if (file.type === "text/csv") {
-            this.setState({input_csv_name: file.name});
-            let reader = new FileReader();
-            reader.onload = this._load_handler;
-            reader.onerror = this._error_handler;
-            await reader.readAsText(file);
+            let inputs = await load_from_csv(file);
+            if (inputs.error || (inputs.results == null)) {
+                AppToaster.show({
+                                    message: "Error reading input CSV file. For formatting help, press 'Help' in the upper right hand corner",
+                                    intent: "danger",
+                                    timeout: 0
+                                });
+            } else {
+                this.clear();
+                this.setState({input_csv_name: file.name});
+                let r = inputs.results;
+                let hit_error = false;
+                try {
+                    let inputted_d_deltas = [r.d_meas_1, r.d_meas_2, r.d_meas_3, r.d_meas_4, r.d_meas_5];
+                    let inputted_o_deltas = [r.o_meas_1, r.o_meas_2, r.o_meas_3, r.o_meas_4, r.o_meas_5];
+                    for (let i = 0; i < NUM_DELTAS; i++) {
+                        this.handle_deuterium_delta_change(i, inputted_d_deltas[i]);
+                        this.handle_oxygen_delta_change(i, inputted_o_deltas[i]);
+                    }
+                } catch (e) {
+                    hit_error = true;
+                }
+                try {
+                    let inputted_dates = [r.sample_time_1, r.sample_time_2, r.sample_time_3, r.sample_time_4, r.sample_time_5, r.sample_time_6];
+                    for (let i = 0; i < NUM_SAMPLE_TIMES; i++) {
+                        if (inputted_dates[i]) {
+                            this.handle_date_change(i, inputted_dates[i]);
+                        }
+                    }
+                } catch (e) {
+                    hit_error = true;
+                }
+                try {
+                    if (r.dose_weight) {
+                        this.setState({mixed_dose: true});
+                        this.handle_dose_weight_change(0, r.dose_weight);
+                    } else if (r.dose_weight_d && r.dose_weight_o) {
+                        this.handle_dose_weight_change(0, r.dose_weight_d);
+                        this.handle_dose_weight_change(1, r.dose_weight_o);
+                    }
+                } catch (e) {
+                    hit_error = true;
+                }
+                try {
+                    this.handle_dose_enrichment_change(0, r.dose_enrichment_d);
+                    this.handle_dose_enrichment_change(1, r.dose_enrichment_o);
+                    this.handle_subject_weight_change(0, r.subject_weight_initial);
+                    this.handle_subject_weight_change(1, r.subject_weight_final);
+                    this.handle_subject_id_change(r.subject_id);
+                } catch (e) {
+                    hit_error = true;
+                }
+                if (hit_error) {
+                    AppToaster.show({
+                                        message:
+                                            "One or more values not inputted automatically. Add manually, or fix CSV format." +
+                                            " For formatting help, press 'Help' in the upper right hand corner",
+                                        intent: "danger",
+                                        timeout: 0
+                                    });
+                } else {
+                    console.log('filename is ', this.state.input_csv_name);
+                    AppToaster.show({
+                                        message:
+                                            "Inputs successfully loaded from ".concat(this.state.input_csv_name),
+                                        intent: "primary",
+                                        timeout: 3000
+                                    });
+                }
+            }
         } else {
             AppToaster.show({
                                 message: "Select a .csv file. For formatting help, press 'Help' in the upper right hand corner",
@@ -523,41 +640,6 @@ export class DLWApp extends React.Component<any, DLWState> {
                                 intent: "danger",
                                 timeout: 0
                             });
-        }
-    };
-
-
-    _load_handler = (event: ProgressEvent) => {
-        console.log("into load handler");
-        // @ts-ignore
-        let csv = event.target.result;
-        let all_text_lines = csv.split(/\r\n|\n/);
-        let columns = all_text_lines[0].split(',');
-        console.log('columns', columns);
-        try {
-            let data = all_text_lines[1].split(',');
-            console.log('data is', data);
-            //TODO: make this deal with other csv orders
-            let d_deltas = data.slice(0, 5);
-            let o_deltas = data.slice(5, 10);
-            let sample_times = data.slice(10, 15);
-            let dose_weights = data.slice(15, 17);
-            let dose_enrichments = data.slice(17, 19);
-            let subject_weights = data.slice(19, 21);
-            let subject_id = data.slice(21, 22);
-            for (let i = 0; i < d_deltas.length; i++) {
-                this.handle_deuterium_delta_change(i, d_deltas[i]);
-                this.handle_oxygen_delta_change(i, o_deltas[i]);
-                this.handle_date_change(i, moment.utc(sample_times[i]));
-            }
-            for (let i = 0; i < dose_weights.length; i++) {
-                this.handle_dose_weight_change(i, dose_weights[i]);
-                this.handle_dose_enrichment_change(i, dose_enrichments[i]);
-                this.handle_subject_weight_change(i, subject_weights[i]);
-            }
-            this.setState({subject_id: subject_id});
-        } catch (e) {
-            this._bad_format("");
         }
     };
 
@@ -772,5 +854,13 @@ export class DLWApp extends React.Component<any, DLWState> {
             }
         }
     };
+
+    handle_subject_id_change = (event: FormEvent<HTMLElement> | string) => {
+        if (this.state.results.calculations) {
+            this.setState({clear_popup_open: true});
+        }
+        let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
+        this.setState({subject_id: value});
+    }
 
 }
