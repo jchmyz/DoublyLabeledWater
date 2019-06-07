@@ -36,7 +36,7 @@ export class DeltaScatterChart extends React.Component<DeltaScatterChartProps> {
                     return typeof value === "number" ? SAMPLE_LABELS[value] : value;
                 }}/>
                 <Scatter yAxisId="2H" name="Measured 2H" data={this.props.chart_data_d_meas} fill="#ff9900"/>
-                <Scatter yAxisId="O18" name="Measured O18" data={this.props.chart_data_o18_meas} fill="#0000ff"/>
+                <Scatter yAxisId="O18" name="Measured 18O" data={this.props.chart_data_o18_meas} fill="#0000ff"/>
                 <Legend verticalAlign="top" align="right" height={30}/>
             </ScatterChart>
         );

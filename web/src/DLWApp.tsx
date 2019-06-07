@@ -356,7 +356,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <Card className='results-card'>
                         <div className='result-sections'>
                             <div className='result-section'>
-                                <h5 className='chart-title'>Deuterium/O18 Measured Enrichments</h5>
+                                <h5 className='chart-title'>Deuterium/18O Measured Enrichments</h5>
                                 {deltas_chart}
                             </div>
                         </div>
