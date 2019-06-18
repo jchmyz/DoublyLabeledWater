@@ -14,6 +14,7 @@ api = Api(app)
 
 CALCULATED_RESULTS = None  # type: DLWSubject
 
+
 @app.route('/calculate', methods=['POST'])
 def calculate_from_inputs():
     input_data = json.loads(request.get_data().decode('utf-8'))
@@ -87,7 +88,6 @@ def export_to_csv():
 def load_csv():
     file = request.get_data().decode('utf-8')
     rows = file.split('\n')
-    print('got rows {}'.format(rows))
     reader = csv.DictReader(rows)
     for row in reader:
         # there should only be one, TODO batched processing
@@ -97,6 +97,10 @@ def load_csv():
 @app.route('/')
 def root():
     return send_from_directory(STATICS_LOCATION, 'index.html')
+
+
+def run_app():
+    app.run(debug=False)
 
 
 if __name__ == '__main__':
