@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-        name='dlw2',
+        name='dlw',
         version='0.0.1',
         author='Julia Chmyz',
         author_email='julia@chmyz.com',
