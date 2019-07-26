@@ -493,7 +493,10 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <h5>Input a name for a new .csv file</h5>
                             <InputGroup placeholder='CSV filename' className='csv_input'
                                         onChange={(event: FormEvent<HTMLElement>) =>
-                                            this.setState({new_csv_name: (event.target as HTMLInputElement).value})}/>
+                                            this.setState({
+                                                              new_csv_name: (event.target as HTMLInputElement).value,
+                                                              append_csv_name: ""
+                                                          })}/>
                         </div>
                         <div className='csv-append'>
                             <h5>Or, select an existing .csv file to append results to</h5>
@@ -511,7 +514,12 @@ export class DLWApp extends React.Component<any, DLWState> {
     }
 
     export = async () => {
-        let results = await export_to_csv(this.state.new_csv_name);
+        let results = null;
+        if (this.state.new_csv_name.length > 0) {
+            results = await export_to_csv(this.state.new_csv_name);
+        } else {
+            results = await export_to_csv(this.state.append_csv_name);
+        }
         if (results.error) {
             AppToaster.show({
                                 message: "Error exporting results to csv. Please file a bug report at https://github.com/jchmyz/DoublyLabeledWater/issues",
@@ -605,7 +613,8 @@ export class DLWApp extends React.Component<any, DLWState> {
 
     handle_csv_upload = async (event: FormEvent<HTMLInputElement>) => {
         let file = (event.target as any).files[0];
-        if (file.type === "text/csv") {
+        console.log(file);
+        if ((file.type === "text/csv" || file.type === "application/vnd.ms-excel") || (file.type === "" && file.name.endsWith(".csv"))) {
             let inputs = await load_from_csv(file);
             if (inputs.error || (inputs.results == null)) {
                 AppToaster.show({
@@ -687,8 +696,9 @@ export class DLWApp extends React.Component<any, DLWState> {
 
     handle_csv_append_choice = (event: FormEvent<HTMLInputElement>) => {
         let file = (event.target as any).files[0];
-        if (file.type === "text/csv") {
-            this.setState({append_csv_name: file.name});
+        console.log(file);
+        if ((file.type === "text/csv" || file.type === "application/vnd.ms-excel") || (file.type === "" && file.name.endsWith(".csv"))) {
+            this.setState({append_csv_name: file.name, new_csv_name: ""});
         } else {
             AppToaster.show({
                                 message: "Select an existing .csv file.",

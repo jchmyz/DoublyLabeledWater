@@ -40,7 +40,7 @@ export async function export_to_csv(filename: string): Promise<CSVExportResults>
     if (response.ok) {
         return response.json();
     } else {
-        return {saved_file: "", error: true};
+        return {saved_file: "ERROR", error: true};
     }
 }
 
