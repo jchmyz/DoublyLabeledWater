@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize import curve_fit
 from datetime import timedelta
 import os.path
 
@@ -43,11 +44,12 @@ class DLWSubject:
            subject_id ([string]): string identifier for the data
            pop_avg_rdil ([float]): population average dilution space ratio, if provided
            in_permil ([bool]): True if measured d and O18 are in permil, false if they are in ppm
+           expo_calc ([bool]): True if exponential calculations are requested
            d_ratios (np.array): deuterium ratios of subject samples
            o18_ratios (np.array): 18O ratios of subject samples
-           kd_per_hr (float): deuterium turnover rate in 1/hr
-           ko_per_hr (float): oxygen turnover rate in 1/hr
-           ko_kd_ratio (float): ratio of oxygen and deuterium turnover rates
+           kd_per_hr_2pt (float): deuterium turnover rate in 1/hr
+           ko_per_hr_2pt (float): oxygen turnover rate in 1/hr
+           ko_kd_ratio_2pt (float): ratio of oxygen and deuterium turnover rates
            nd (dict): dictionary containing all the calculated values of the deuterium dilution space
                 plat_a_mol (float): calculated by the plateau method using the a sample in mol
                 plat_b_mol (float): calculated by the plateau method using the b sample in mol
@@ -145,7 +147,7 @@ class DLWSubject:
     """
 
     def __init__(self, d_meas, o18_meas, sample_datetimes, dose_weights, mixed_dose, dose_enrichments,
-                 subject_weights, subject_id, in_permil=True, pop_avg_rdil=None):
+                 subject_weights, subject_id, in_permil=True, pop_avg_rdil=None, expo_calc=False):
         """Constructor for the DLWSubject class
            :param d_meas (np.array): deuterium delta values of subject samples
            :param o18_meas (np.array): oxygen 18 delta values of subject samples
@@ -157,8 +159,9 @@ class DLWSubject:
            :param subject_id ([string]): string identifier for the data
            :param in_permil ([bool]): True if measured d and O18 are in permil, false if they are in ppm
            :param pop_avg_rdil ([float]): population average dilution space to use in the calculations
+           :param expo_calc ([bool]): True if exponential calculations are requested
         """
-        if len(d_meas) == len(o18_meas) == len(sample_datetimes)-1 == 5:
+        if len(d_meas) == len(o18_meas) == len(sample_datetimes) - 1 == 5:
 
             self.sample_datetimes = sample_datetimes
             self.dose_weights = dose_weights
@@ -183,9 +186,9 @@ class DLWSubject:
                 self.d_deltas = self.d_ratios_to_deltas()
                 self.o18_deltas = self.o18_ratios_to_deltas()
 
-            self.kd_per_hr = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
-            self.ko_per_hr = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
-            self.ko_kd_ratio = self.ko_per_hr / self.kd_per_hr
+            self.kd_per_hr_2pt = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
+            self.ko_per_hr_2pt = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
+            self.ko_kd_ratio_2pt = self.ko_per_hr_2pt / self.kd_per_hr_2pt
 
             self.mol_masses = self.calculate_mol_masses(self.dose_enrichments, self.mixed_dose)
 
@@ -194,7 +197,7 @@ class DLWSubject:
 
             self.dil_space_ratio = self.nd['plat_a_mol'] / self.no['plat_a_mol']  # dilution space ratio err flag
 
-            # self.rh2o = (self.nd['adj_plat_avg_kg'] * self.kd_per_hr * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
+            # self.rh2o = (self.nd['adj_plat_avg_kg'] * self.kd_per_hr_2pt * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
 
             self.total_body_water_d_kg = self.nd['adj_plat_avg_kg'] / POP_DIL_SPACE_D
             self.total_body_water_o_kg = self.no['adj_plat_avg_kg'] / POP_DIL_SPACE_O
@@ -218,7 +221,7 @@ class DLWSubject:
             self.ee_check = self.ee_consistency_check()  # err flag # 4 pd4
 
         else:
-            raise ValueError('Arrays not correct size')
+            raise ValueError('Arrays not same size')
 
     def d_deltas_to_ratios(self):
         """Convert deuterium delta values to ratios.
@@ -280,6 +283,27 @@ class DLWSubject:
         return np.mean(turnovers)
 
     @staticmethod
+    def turnover_exponential(ratios, sampledatetime, turnover_guess):
+        """Calculate the isotope turnover rate in 1/hr using the exponential method
+                   :param ratios: measured urine isotope ratios
+                   :param sampledatetime: time and date of urine collections
+                   :param turnover_guess: inital guess for turnover value
+                   :return: isotope turnover rate in 1/hr
+                   """
+
+        # Calculated time elapsed from dose time
+        finalsize = len(sampledatetime) - 2
+        elapsedhours = np.zeros(finalsize)
+        for i in range(finalsize):
+            elapsedhours[i] = (timedelta.total_seconds(sampledatetime[i + 2] - sampledatetime[1])) / 3600
+
+        # Calculate isotope excess (measurements minus the background measurement)
+        ratio_excess = ratios[1:] - ratios[0]
+
+        popt, pcov = curve_fit(exp_func, elapsedhours, ratio_excess, p0=(ratio_excess[0], turnover_guess))
+        return popt[1]
+
+    @staticmethod
     def calculate_mol_masses(dose_enrichments, mixed_dose):
         """ Calculate the molecular masses for the enriched dose waters
             :param: dose_enrichments ([float]):dose enrichments in ppm of doses administered, 2H first, 18O second
@@ -308,19 +332,19 @@ class DLWSubject:
 
         nd = {}
         nd['plat_a_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
-                                                         self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0])
+                                                       self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0])
         nd['plat_b_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
-                                                         self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
+                                                       self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
         nd['plat_avg_mol'] = (nd['plat_a_mol'] + nd['plat_b_mol']) / 2
 
         dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[1]) / 3600
         nd['int_a_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
-                                                          self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0],
-                                                          self.kd_per_hr, dosetime)
+                                                        self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0],
+                                                        self.kd_per_hr_2pt, dosetime)
         dosetime = timedelta.total_seconds(self.sample_datetimes[3] - self.sample_datetimes[1]) / 3600
         nd['int_b_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
-                                                          self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0],
-                                                          self.kd_per_hr, dosetime)
+                                                        self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0],
+                                                        self.kd_per_hr_2pt, dosetime)
         nd['int_avg_mol'] = (nd['int_a_mol'] + nd['int_b_mol']) / 2
 
         nd['adj_plat_avg_mol'] = self.adj_dilution_space(nd['plat_avg_mol'], self.subject_weights)
@@ -336,21 +360,21 @@ class DLWSubject:
 
         no = {}
         no['plat_a_mol'] = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
-                                                         self.dose_enrichments[1], self.o18_ratios[1],
-                                                         self.o18_ratios[0])
+                                                       self.dose_enrichments[1], self.o18_ratios[1],
+                                                       self.o18_ratios[0])
         no['plat_b_mol'] = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
-                                                         self.dose_enrichments[1], self.o18_ratios[2],
-                                                         self.o18_ratios[0])
+                                                       self.dose_enrichments[1], self.o18_ratios[2],
+                                                       self.o18_ratios[0])
         no['plat_avg_mol'] = (no['plat_a_mol'] + no['plat_b_mol']) / 2
 
         dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[1]) / 3600
         no['int_a_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
-                                                          self.dose_enrichments[1], self.o18_ratios[1],
-                                                          self.o18_ratios[0], self.ko_per_hr, dosetime)
+                                                        self.dose_enrichments[1], self.o18_ratios[1],
+                                                        self.o18_ratios[0], self.ko_per_hr_2pt, dosetime)
         dosetime = timedelta.total_seconds(self.sample_datetimes[3] - self.sample_datetimes[1]) / 3600
         no['int_b_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
-                                                          self.dose_enrichments[1], self.o18_ratios[2],
-                                                          self.o18_ratios[0], self.ko_per_hr, dosetime)
+                                                        self.dose_enrichments[1], self.o18_ratios[2],
+                                                        self.o18_ratios[0], self.ko_per_hr_2pt, dosetime)
         no['int_avg_mol'] = (no['int_a_mol'] + no['int_b_mol']) / 2
 
         no['adj_plat_avg_mol'] = self.adj_dilution_space(no['plat_avg_mol'], self.subject_weights)
@@ -433,9 +457,9 @@ class DLWSubject:
         """
         schoeller = {}
         schoeller['co2_int'] = self.calc_schoeller_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
-                                                         self.kd_per_hr, self.ko_per_hr)
+                                                       self.kd_per_hr_2pt, self.ko_per_hr_2pt)
         schoeller['co2_plat'] = self.calc_schoeller_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
-                                                          self.kd_per_hr, self.ko_per_hr)
+                                                        self.kd_per_hr_2pt, self.ko_per_hr_2pt)
         schoeller = self.change_units_co2(schoeller)
         schoeller = self.tee_calcs(schoeller)
 
@@ -453,7 +477,7 @@ class DLWSubject:
         """
         n = ((no / 1.01) + (nd / 1.04)) / 2
         co2_prod = (n / 2.078) * (1.01 * ko - 1.04 * kd) - 0.0246 * n * 1.05 * (1.01 * ko - 1.04 * kd)
-        # reduces to co2prod = n*(0.459952*ko_per_hr - 0.47362*kd_per_hr)
+        # reduces to co2prod = n*(0.459952*ko_per_hr_2pt - 0.47362*kd_per_hr_2pt)
         return co2_prod
 
     def calculate_racette(self):
@@ -462,9 +486,9 @@ class DLWSubject:
         """
         racette = {}
         racette['co2_int'] = self.calc_racette_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
-                                                         self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
+                                                   self.kd_per_hr_2pt, self.ko_per_hr_2pt, self.pop_avg_rdil)
         racette['co2_plat'] = self.calc_racette_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
-                                                          self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
+                                                    self.kd_per_hr_2pt, self.ko_per_hr_2pt, self.pop_avg_rdil)
         racette = self.change_units_co2(racette)
         racette = self.tee_calcs(racette)
 
@@ -480,8 +504,8 @@ class DLWSubject:
            :param ko: oxygen turnover rate in 1/hr
            :return co2prod: co2 production rate in mol/hr
         """
-        r_dil = (pop_avg_rdil+1.034)/2
-        n = ((no / 1.01) + (nd / (1.01 *r_dil))) / 2
+        r_dil = (pop_avg_rdil + 1.034) / 2
+        n = ((no / 1.01) + (nd / (1.01 * r_dil))) / 2
         co2_prod = (n / 2.078) * (1.01 * ko - 1.01 * kd * r_dil) - 0.0245 * n * 1.05 * (1.01 * ko - 1.01 * kd * r_dil)
         return co2_prod
 
@@ -491,9 +515,9 @@ class DLWSubject:
         """
         speakman = {}
         speakman['co2_int'] = self.calc_speakman_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
-                                                   self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
+                                                     self.kd_per_hr_2pt, self.ko_per_hr_2pt, self.pop_avg_rdil)
         speakman['co2_plat'] = self.calc_speakman_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
-                                                    self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
+                                                      self.kd_per_hr_2pt, self.ko_per_hr_2pt, self.pop_avg_rdil)
         speakman = self.change_units_co2(speakman)
         speakman = self.tee_calcs(speakman)
 
@@ -510,7 +534,7 @@ class DLWSubject:
            :return co2prod: co2 production rate in mol/hr
         """
         n = (no + (nd / pop_avg_rdil)) / 2
-        co2_prod = (n / 2.078) * (ko - kd * pop_avg_rdil) - (0.0062 * n  * kd * pop_avg_rdil)
+        co2_prod = (n / 2.078) * (ko - kd * pop_avg_rdil) - (0.0062 * n * kd * pop_avg_rdil)
         return co2_prod
 
     @staticmethod
@@ -538,7 +562,7 @@ class DLWSubject:
         """
         return co2 * LITERS_PER_MOL * HOURS_PER_DAY * WEIR_CONSTANT
 
-    def tee_calcs (self, equation):
+    def tee_calcs(self, equation):
         """Change the units on the tee calculations.
            :param equation: dict with co2 previously calculated
            :return equation: dict now containing tee measurements
@@ -592,7 +616,7 @@ class DLWSubject:
                         'spk_rCO2_plat_mol/day,spk_rCO2_plat_L/day,spk_EE_plat_kcal/day,spk_EE_plat_MJ/day,'
                         '2H_plateau_%,18O_plateau_%,DS_ratio,EE_consistency_check,ko/kd')
         write_data = np.asarray(
-            [[self.subject_id, self.kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
+            [[self.subject_id, self.kd_per_hr_2pt, self.ko_per_hr_2pt, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
               self.total_body_water_ave_kg, self.fat_free_mass_kg, self.fat_mass_kg, self.body_fat_percent,
               self.schoeller['co2_int_mol_day'], self.schoeller['co2_int_L_day'], self.schoeller['tee_int_kcal_day'],
               self.schoeller['tee_int_mj_day'], self.schoeller['co2_plat_mol_day'], self.schoeller['co2_plat_L_hr'],
@@ -603,7 +627,7 @@ class DLWSubject:
               self.speakman['co2_int_mol_day'], self.speakman['co2_int_L_day'], self.speakman['tee_int_kcal_day'],
               self.speakman['tee_int_mj_day'], self.speakman['co2_plat_mol_day'], self.speakman['co2_plat_L_hr'],
               self.speakman['tee_plat_kcal_day'], self.speakman['tee_plat_mj_day'], self.d_ratio_percent,
-              self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
+              self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio_2pt]])
         if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
             file = open(filename, 'a+')
             np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")
