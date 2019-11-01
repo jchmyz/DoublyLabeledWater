@@ -1,16 +1,13 @@
 import * as React from "react";
 import {
-    ButtonGroup, Popover,
-    FormGroup,
-    NumericInput,
-    Button, Toaster, Position,
-    InputGroup, Alignment, Tag, FileInput, Dialog, Checkbox, Radio, RadioGroup, Intent
+    Popover, FormGroup, Button, Toaster, Position,
+    InputGroup, Alignment, FileInput, Dialog, Checkbox, Radio, RadioGroup, Intent
 } from "@blueprintjs/core";
 import * as DateTimePicker from 'react-datetime';
 import * as moment from 'moment';
-import {calculate_from_inputs, export_to_csv, load_from_csv, LoadedCSVResults} from "./Requests";
+import {calculate_from_inputs, export_to_csv, load_from_csv} from "./Requests";
 import {FormEvent, RefObject} from "react";
-import {Card, Icon, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@blueprintjs/core/lib/cjs";
+import {Card, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@blueprintjs/core/lib/cjs";
 import {NumberInput} from "./NumberInput";
 import convert_string_to_moment from "./utilities";
 import {DeltaScatterChart} from "./DeltaScatterChart";
@@ -49,7 +46,6 @@ export interface Results {
         racette: {
             rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
         }
-
         speakman: {
             rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
         }
@@ -183,7 +179,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         if (this.state.mixed_dose) {
             dose_weight_inputs.push(
                 <NumberInput placeholder={"Dose weight (g)"} index={0} value={this.state.dose_weights[0]} unit={"g"}
-                             change_function={this.handle_dose_weight_change}/>);
+                             change_function={this.handle_dose_weight_change} key={0}/>);
         }
         let results_display: JSX.Element = <div/>;
         if (this.state.results.results) {
@@ -422,8 +418,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                                    inputProps={{
                                        'accept': '.csv',
                                        'id': 'file-input'
-                                   }} onInputChange={this.handle_csv_upload}
-                                   disabled={!!(this.state.input_csv_name)}/>
+                                   }} onInputChange={this.handle_csv_upload}/>
                     </div>
                     <div className='samples'>
                         <div className='date-inputs'>
@@ -553,7 +548,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                 subject_weights: this.state.subject_weights,
                 subject_id: this.state.subject_id,
                 mixed_dose: this.state.mixed_dose,
-                in_permil: (this.state.delta_units === DeltaUnits.permil)
+                in_permil: (this.state.delta_units === DeltaUnits.permil),
+                pop_avg_rdil: this.state.dilution_space_ratio ? this.state.dilution_space_ratio : null
             }
         );
         if (calculated_results.results) {
