@@ -9,7 +9,7 @@ import {calculate_from_inputs, export_to_csv, load_from_csv} from "./Requests";
 import {FormEvent, RefObject} from "react";
 import {Card, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@blueprintjs/core/lib/cjs";
 import {NumberInput} from "./NumberInput";
-import convert_string_to_moment from "./utilities";
+import {convert_string_to_moment, check_array_for_missing_values} from "./utilities";
 import {DeltaScatterChart} from "./DeltaScatterChart";
 
 const DEUTERIUM = "Deuterium";
@@ -51,7 +51,7 @@ export interface Results {
         }
         error_flags: {
             plateau_2h: string[],
-            plateau_180: string[],
+            plateau_18O: string[],
             ds_ratio: string[],
             ee: string[],
             ko_kd: string[]
@@ -68,6 +68,7 @@ interface DLWState {
     input_csv_name: string;
     info_overlay_open: boolean;
     clear_popup_open: boolean;
+    missing_data_popup_open: boolean;
 
     delta_units: DeltaUnits;
     deuterium_deltas: string[],
@@ -86,6 +87,9 @@ interface DLWState {
     dose_weights_validated: boolean,
     dose_enrichments_validated: boolean,
     subject_weights_validated: boolean,
+    minimum_dates: boolean,
+    minimum_deuterium_deltas: boolean,
+    minimum_oxygen_deltas: boolean,
 
     results: Results
     new_csv_name: string,
@@ -103,27 +107,19 @@ export class DLWApp extends React.Component<any, DLWState> {
         this.now = moment();
         this.scroll_anchor_ref = React.createRef();
         this.state = {
-            input_csv_name: "",
-            info_overlay_open: false,
-            clear_popup_open: false,
+            input_csv_name: "", info_overlay_open: false, clear_popup_open: false, missing_data_popup_open: false,
 
             delta_units: DeltaUnits.permil,
-            deuterium_deltas: ["", "", "", "", ""],
-            oxygen_deltas: ["", "", "", "", ""],
+            deuterium_deltas: ["", "", "", "", ""], oxygen_deltas: ["", "", "", "", ""],
             datetimes: [this.now, this.now, this.now, this.now, this.now, this.now],
-            dose_weights: ["", ""],
-            dose_enrichments: ["", ""],
+            dose_weights: ["", ""], dose_enrichments: ["", ""],
             mixed_dose: false,
-            subject_weights: ["", ""],
-            dilution_space_ratio: "",
-            subject_id: "",
+            subject_weights: ["", ""], dilution_space_ratio: "", subject_id: "",
 
-            deuterium_deltas_validated: false,
-            oxygen_deltas_validated: false,
-            datetimes_validated: false,
-            dose_weights_validated: false,
-            dose_enrichments_validated: false,
-            subject_weights_validated: false,
+            deuterium_deltas_validated: false, oxygen_deltas_validated: false, datetimes_validated: false,
+            dose_weights_validated: false, dose_enrichments_validated: false, subject_weights_validated: false,
+
+            minimum_dates: false, minimum_deuterium_deltas: false, minimum_oxygen_deltas: false,
 
             results: {results: null},
             new_csv_name: "", append_csv_name: ""
@@ -132,8 +128,10 @@ export class DLWApp extends React.Component<any, DLWState> {
 
     render() {
         let all_inputs_validated =
-            (this.state.deuterium_deltas_validated && this.state.oxygen_deltas_validated
-                && this.state.datetimes_validated && this.state.dose_weights_validated
+            ((this.state.deuterium_deltas_validated || this.state.minimum_deuterium_deltas)
+                && (this.state.oxygen_deltas_validated || this.state.minimum_oxygen_deltas)
+                && (this.state.datetimes_validated || this.state.minimum_dates)
+                && this.state.dose_weights_validated
                 && this.state.dose_enrichments_validated && this.state.subject_weights_validated
                 && this.state.subject_id);
 
@@ -271,13 +269,13 @@ export class DLWApp extends React.Component<any, DLWState> {
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.plateau_2h[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_2h[1] + '%'}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_2h[1]}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_180[1]) < 0.05) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_18O[1]) < 0.05) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.results.error_flags.plateau_180[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_180[1] + '%'}</p>
+                    <p className="result-label">{this.state.results.results.error_flags.plateau_18O[0] + ":"}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_18O[1]}</p>
                 </div>);
             error_class = ((parseFloat(this.state.results.results.error_flags.ds_ratio[1]) < 1.070 &&
                 parseFloat(this.state.results.results.error_flags.ds_ratio[1]) > 1) ? error_okay : outside_error_bars);
@@ -290,7 +288,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.ee[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.ee[1] + "%"}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.ee[1]}</p>
                 </div>);
             error_class = ((parseFloat(this.state.results.results.error_flags.ko_kd[1]) < 1.7 &&
                 parseFloat(this.state.results.results.error_flags.ko_kd[1]) > 1.1) ? error_okay : outside_error_bars);
@@ -302,8 +300,12 @@ export class DLWApp extends React.Component<any, DLWState> {
             let chart_data_d_meas = [];
             let chart_data_o18_meas = [];
             for (let i = 0; i < this.state.deuterium_deltas.length; i++) {
-                chart_data_d_meas.push({x: i, y: this.state.deuterium_deltas[i]});
-                chart_data_o18_meas.push({x: i, y: this.state.oxygen_deltas[i]});
+                if (this.state.deuterium_deltas[i] != "") {
+                    chart_data_d_meas.push({x: i, y: this.state.deuterium_deltas[i]});
+                }
+                if (this.state.oxygen_deltas[i] != "") {
+                    chart_data_o18_meas.push({x: i, y: this.state.oxygen_deltas[i]});
+                }
             }
             let deltas_chart: JSX.Element = (
                 <DeltaScatterChart delta_units={this.state.delta_units}
@@ -360,7 +362,6 @@ export class DLWApp extends React.Component<any, DLWState> {
                 </div>
             )
         }
-
         return (
             <Navbar className='dlw-nav'>
                 <Dialog isOpen={this.state.info_overlay_open} canEscapeKeyClose={true} canOutsideClickClose={false}
@@ -480,8 +481,26 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <NumberInput placeholder={"Dilution space ratio"} value={this.state.dilution_space_ratio}
                                          change_function={this.handle_dilution_space_ratio_change} unit={''} index={0}/>
                         </div>
-                        <Button className='calculate-button' onClick={this.submit_inputs} intent={Intent.SUCCESS}
-                                disabled={!all_inputs_validated}>CALCULATE RESULTS</Button>
+                        <Popover isOpen={this.state.missing_data_popup_open} position={Position.TOP}>
+                            <Button className='calculate-button' onClick={() => {
+                                if ((this.state.minimum_dates && !this.state.datetimes_validated) ||
+                                    (this.state.minimum_deuterium_deltas && !this.state.deuterium_deltas_validated) ||
+                                    (this.state.minimum_oxygen_deltas && !this.state.oxygen_deltas_validated)) {
+                                    this.setState({missing_data_popup_open: true});
+                                } else {
+                                    this.submit_inputs();
+                                }
+                            }} intent={Intent.SUCCESS} disabled={!all_inputs_validated}>CALCULATE RESULTS</Button>
+                            <div>
+                                <p>Missing input data detected. Calculate anyway?</p>
+                                <div className='missing-data-confirm-buttons'>
+                                    <Button text={"CALCULATE"} intent={Intent.DANGER} onClick={this.submit_inputs}/>
+                                    <Button text={"CANCEL"} intent={Intent.PRIMARY} onClick={() => {
+                                        this.setState({missing_data_popup_open: false})
+                                    }}/>
+                                </div>
+                            </div>
+                        </Popover>
                     </div>
                     <div className='submit-group'>
                         <div className='csv-input-new'>
@@ -504,8 +523,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     {results_display}
                 </FormGroup>
             </Navbar>
-        )
-            ;
+        );
     }
 
     export = async () => {
@@ -531,7 +549,11 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     submit_inputs = async () => {
+        this.setState({missing_data_popup_open: false});
         let datetimes = this.state.datetimes.map((value: moment.Moment) => {
+            if (value == this.now) {
+                return [1, 0, 1, 1, 1];
+            }
             return value.toArray();
         });
         // months are zero-indexed in Moment.js
@@ -748,7 +770,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                 new_deltas.splice(index, 1, value);
                 this.setState({
                                   deuterium_deltas: new_deltas,
-                                  deuterium_deltas_validated: this.check_numerical_inputs(new_deltas)
+                                  deuterium_deltas_validated: this.check_numerical_inputs(new_deltas),
+                                  minimum_deuterium_deltas: check_array_for_missing_values(new_deltas, "")
                               });
             } else this._flag_non_numerical_input();
         } else {
@@ -768,7 +791,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                 new_deltas.splice(index, 1, value);
                 this.setState({
                                   oxygen_deltas: new_deltas,
-                                  oxygen_deltas_validated: this.check_numerical_inputs(new_deltas)
+                                  oxygen_deltas_validated: this.check_numerical_inputs(new_deltas),
+                                  minimum_oxygen_deltas: check_array_for_missing_values(new_deltas, "")
                               });
             } else this._flag_non_numerical_input();
         } else {
@@ -808,6 +832,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             this.setState({
                               datetimes: new_date_array,
                               datetimes_validated: all_dates_filled,
+                              minimum_dates: check_array_for_missing_values(new_date_array, this.now)
                           })
         } else {
             let split_values = value.split(" ");
@@ -822,7 +847,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     if (moment.parseZone(new Date(split_values[i])).isValid()) {
                         if (i < split_values.length - 1) {
                             if (moment.parseZone(new Date(split_values[i + 1])).isValid()) {
-                                //both valid dates- don't need to worry about spaces, treat them as separate dates
+                                // both valid dates- don't need to worry about spaces, treat them as separate dates
                                 let as_moment = convert_string_to_moment(split_values[i]);
                                 if (typeof as_moment !== "boolean") {
                                     this.handle_date_change(index + i, as_moment);
