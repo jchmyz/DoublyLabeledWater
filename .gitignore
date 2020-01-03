@@ -1,0 +1,12 @@
+**/__pycache__/
+/build/
+dlw/web/build_tmp
+dist
+nosetests.xml
+.eggs
+*egg-info
+venv/
+dlw/.idea
+.idea
+logs/*
+built-dependencies.txt

@@ -4,6 +4,7 @@ import json
 import numpy as np
 import datetime
 import csv
+import click
 
 from dlw import DLWSubject
 
@@ -118,8 +119,11 @@ def root():
     return send_from_directory(STATICS_LOCATION, 'index.html')
 
 
-def run_app():
-    app.run(debug=False)
+@click.command()
+@click.option('--host', default=None)
+@click.option('--port', default=None)
+def run_app(host, port):
+    app.run(debug=False, host=host, port=port)
 
 
 if __name__ == '__main__':

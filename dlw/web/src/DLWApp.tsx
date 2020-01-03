@@ -232,6 +232,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <p className="result-value">{this.state.results.results.calculations.body_fat_percentage[1] + "%"}</p>
                 </div>);
 
+            //@ts-ignore
             function push_calculated_results(element: JSX.Element[], result_set: RCO2_RESULTS) {
                 element.push(
                     <div className='result-pair'>
@@ -481,7 +482,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <NumberInput placeholder={"Dilution space ratio"} value={this.state.dilution_space_ratio}
                                          change_function={this.handle_dilution_space_ratio_change} unit={''} index={0}/>
                         </div>
-                        <Popover isOpen={this.state.missing_data_popup_open} position={Position.TOP}>
+                        <Popover isOpen={this.state.missing_data_popup_open} position={Position.TOP}
+                                 className='full-popover-missing-data' key={'missing-data-popover'}>
                             <Button className='calculate-button' onClick={() => {
                                 if ((this.state.minimum_dates && !this.state.datetimes_validated) ||
                                     (this.state.minimum_deuterium_deltas && !this.state.deuterium_deltas_validated) ||
@@ -491,13 +493,14 @@ export class DLWApp extends React.Component<any, DLWState> {
                                     this.submit_inputs();
                                 }
                             }} intent={Intent.SUCCESS} disabled={!all_inputs_validated}>CALCULATE RESULTS</Button>
-                            <div>
+                            <div className='popover-missing-data'>
                                 <p>Missing input data detected. Calculate anyway?</p>
                                 <div className='missing-data-confirm-buttons'>
-                                    <Button text={"CALCULATE"} intent={Intent.DANGER} onClick={this.submit_inputs}/>
+                                    <Button text={"CALCULATE"} intent={Intent.DANGER} onClick={this.submit_inputs}
+                                            className='missing-data-button' key={'calc-md'}/>
                                     <Button text={"CANCEL"} intent={Intent.PRIMARY} onClick={() => {
                                         this.setState({missing_data_popup_open: false})
-                                    }}/>
+                                    }} className='missing-data-button' key={'cancel-md'}/>
                                 </div>
                             </div>
                         </Popover>
