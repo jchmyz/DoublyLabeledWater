@@ -290,8 +290,7 @@ class DLWSubject:
         turnovers[3] = self.isotope_turnover_2pt(ratios[0], ratios[2], ratios[4], elapsedhours)
         return np.nanmean(turnovers)
 
-    @staticmethod
-    def turnover_exponential(ratios, sampledatetime, turnover_guess):
+    def turnover_exponential(self, ratios, sampledatetime, turnover_guess):
         """Calculate the isotope turnover rate in 1/hr using the exponential method
                    :param ratios: measured urine isotope ratios
                    :param sampledatetime: time and date of urine collections
@@ -308,8 +307,12 @@ class DLWSubject:
         # Calculate isotope excess (measurements minus the background measurement)
         ratio_excess = ratios[1:] - ratios[0]
 
-        popt, pcov = curve_fit(exp_func, elapsedhours, ratio_excess, p0=(ratio_excess[0], turnover_guess))
+        popt, pcov = curve_fit(self.exp_func, elapsedhours, ratio_excess, p0=(ratio_excess[0], turnover_guess))
         return popt[1]
+
+    @staticmethod
+    def exp_func(x, a, b, c):
+        return a * np.exp(-b * x) + c
 
     @staticmethod
     def calculate_mol_masses(dose_enrichments, mixed_dose):
