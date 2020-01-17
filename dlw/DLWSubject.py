@@ -188,19 +188,20 @@ class DLWSubject:
                 self.d_deltas = self.d_ratios_to_deltas()
                 self.o18_deltas = self.o18_ratios_to_deltas()
 
-            if not expo_calc:
+            if expo_calc:
+                # will fail if d_ratios or o18_ratios contain nans
+                self.kd_per_hr = self.turnover_exponential(self.d_ratios, self.sample_datetimes,
+                                                           KD_EXPONENTIAL_TURNOVER_GUESS)
+                self.ko_per_hr = self.turnover_exponential(self.o18_ratios, self.sample_datetimes,
+                                                           KO_EXPONENTIAL_TURNOVER_GUESS)
+
+            else:
                 if len(d_meas) != 5:
                     raise ValueError ("array length incorrect for 2 point turnover calculations")
 
                 self.kd_per_hr = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
                 self.ko_per_hr = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
 
-            else:
-                raise NotImplementedError("exponential calculations not implemented")
-                self.kd_per_hr = self.turnover_exponential(self.d_ratios, self.sample_datetimes,
-                                                           KD_EXPONENTIAL_TURNOVER_GUESS)
-                self.ko_per_hr = self.turnover_exponential(self.o18_ratios, self.sample_datetimes,
-                                                           KO_EXPONENTIAL_TURNOVER_GUESS)
 
             self.ko_kd_ratio_2pt = self.ko_per_hr / self.kd_per_hr
             self.mol_masses = self.calculate_mol_masses(self.dose_enrichments, self.mixed_dose)
@@ -320,12 +321,13 @@ class DLWSubject:
         # Calculate isotope excess (measurements minus the background measurement)
         ratio_excess = ratios[1:] - ratios[0]
 
-        popt, pcov = curve_fit(self.exp_func, elapsedhours, ratio_excess, p0=(ratio_excess[0], turnover_guess))
+        popt, pcov = curve_fit(self.exp_func, elapsedhours, ratio_excess, p0=np.array([ratio_excess[0], turnover_guess]))
         return popt[1]
 
     @staticmethod
-    def exp_func(x, a, b, c):
-        return a * np.exp(-b * x) + c
+    def exp_func(x, a, b):
+        #note that there is no y offset term: with background subtraction we assume that there is no y offset
+        return a * np.exp(-b * x)
 
     @staticmethod
     def calculate_mol_masses(dose_enrichments, mixed_dose):
