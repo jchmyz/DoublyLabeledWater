@@ -13,21 +13,6 @@ export interface CalculationInputs {
     pop_avg_rdil: string|null
 }
 
-export enum Timing {
-    INITIAL = "initial",
-    FINAL = "final"
-}
-
-export const EXPECTED_CSV_FIELDS = [
-    'd_meas_1', 'd_meas_2', 'd_meas_3', 'd_meas_4', 'd_meas_5',
-    'o_meas_1', 'o_meas_2', 'o_meas_3', 'o_meas_4', 'o_meas_5',
-    'sample_times_1', 'sample_times_2', 'sample_times_3', 'sample_times_4', 'sample_times_5', 'sample_times_6',
-    'dose_weight_d', 'dose_weight_o',
-    'dose_enrichment_d', 'dose_enrichment_o',
-    'subject_weight_initial', 'subject_weight_final',
-    'subject_id'
-];
-
 export interface LoadedCSVInputs {
     d_meas_1: string,
     d_meas_2: string,

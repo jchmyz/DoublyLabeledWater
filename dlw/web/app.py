@@ -95,13 +95,7 @@ def calculate_from_inputs():
 
 @app.route('/export', methods=['POST'])
 def export_to_csv():
-    input_data = json.loads(request.get_data().decode('utf-8'))
-    csv_filename = input_data['filename']
-    if csv_filename.endswith('.csv'):
-        saved_file = CALCULATED_RESULTS.save_results_csv(csv_filename)
-    else:
-        saved_file = CALCULATED_RESULTS.save_results_csv(csv_filename + '.csv')
-    return json.dumps({"saved_file": saved_file})
+    return CALCULATED_RESULTS.save_results_csv()
 
 
 @app.route('/load', methods=['POST'])

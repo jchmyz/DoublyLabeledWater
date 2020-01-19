@@ -587,7 +587,7 @@ class DLWSubject:
         diff = self.percent_difference(tee_a, tee_b)
         return diff
 
-    def save_results_csv(self, filename):
+    def save_results_csv(self, filename=None):
         """ Save the results to a csv file
             :param: filename(string), the name of the file to which to save
         """
@@ -612,11 +612,15 @@ class DLWSubject:
               self.speakman['tee_int_mj_day'], self.speakman['co2_plat_mol_day'], self.speakman['co2_plat_L_hr'],
               self.speakman['tee_plat_kcal_day'], self.speakman['tee_plat_mj_day'], self.d_ratio_percent,
               self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
-        if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
-            file = open(filename, 'a+')
-            np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")
+        if not filename:
+            # return data as string
+            return write_header + '\n' + ','.join([d for d in write_data[0]])
         else:
-            file = open(filename, 'a+')
-            np.savetxt(file, write_data, delimiter=',', header=write_header, comments='', fmt="%s")
-        file.close()
-        return os.path.abspath(filename)
+            if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
+                file = open(filename, 'a+')
+                np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")
+            else:
+                file = open(filename, 'a+')
+                np.savetxt(file, write_data, delimiter=',', header=write_header, comments='', fmt="%s")
+            file.close()
+            return os.path.abspath(filename)
