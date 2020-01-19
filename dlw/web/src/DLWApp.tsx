@@ -9,7 +9,7 @@ import {calculate_from_inputs, export_to_csv, load_from_csv} from "./Requests";
 import {FormEvent, RefObject} from "react";
 import {Card, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@blueprintjs/core/lib/cjs";
 import {NumberInput} from "./NumberInput";
-import convert_string_to_moment from "./utilities";
+import {convert_string_to_moment, check_array_for_missing_values, pad} from "./utilities";
 import {DeltaScatterChart} from "./DeltaScatterChart";
 
 const DEUTERIUM = "Deuterium";
@@ -51,7 +51,7 @@ export interface Results {
         }
         error_flags: {
             plateau_2h: string[],
-            plateau_180: string[],
+            plateau_18O: string[],
             ds_ratio: string[],
             ee: string[],
             ko_kd: string[]
@@ -68,6 +68,7 @@ interface DLWState {
     input_csv_name: string;
     info_overlay_open: boolean;
     clear_popup_open: boolean;
+    missing_data_popup_open: boolean;
 
     delta_units: DeltaUnits;
     deuterium_deltas: string[],
@@ -86,10 +87,13 @@ interface DLWState {
     dose_weights_validated: boolean,
     dose_enrichments_validated: boolean,
     subject_weights_validated: boolean,
+    minimum_dates: boolean,
+    minimum_deuterium_deltas: boolean,
+    minimum_oxygen_deltas: boolean,
 
     results: Results
-    new_csv_name: string,
-    append_csv_name: string
+    new_csv_name: string
+    new_csv_url: string
 }
 
 const AppToaster = Toaster.create({className: "app-toaster", position: Position.TOP_RIGHT});
@@ -103,37 +107,30 @@ export class DLWApp extends React.Component<any, DLWState> {
         this.now = moment();
         this.scroll_anchor_ref = React.createRef();
         this.state = {
-            input_csv_name: "",
-            info_overlay_open: false,
-            clear_popup_open: false,
+            input_csv_name: "", info_overlay_open: false, clear_popup_open: false, missing_data_popup_open: false,
 
             delta_units: DeltaUnits.permil,
-            deuterium_deltas: ["", "", "", "", ""],
-            oxygen_deltas: ["", "", "", "", ""],
+            deuterium_deltas: ["", "", "", "", ""], oxygen_deltas: ["", "", "", "", ""],
             datetimes: [this.now, this.now, this.now, this.now, this.now, this.now],
-            dose_weights: ["", ""],
-            dose_enrichments: ["", ""],
+            dose_weights: ["", ""], dose_enrichments: ["", ""],
             mixed_dose: false,
-            subject_weights: ["", ""],
-            dilution_space_ratio: "",
-            subject_id: "",
+            subject_weights: ["", ""], dilution_space_ratio: "", subject_id: "",
 
-            deuterium_deltas_validated: false,
-            oxygen_deltas_validated: false,
-            datetimes_validated: false,
-            dose_weights_validated: false,
-            dose_enrichments_validated: false,
-            subject_weights_validated: false,
+            deuterium_deltas_validated: false, oxygen_deltas_validated: false, datetimes_validated: false,
+            dose_weights_validated: false, dose_enrichments_validated: false, subject_weights_validated: false,
 
-            results: {results: null},
-            new_csv_name: "", append_csv_name: ""
+            minimum_dates: false, minimum_deuterium_deltas: false, minimum_oxygen_deltas: false,
+
+            results: {results: null}, new_csv_name: "", new_csv_url: ""
         };
     }
 
     render() {
         let all_inputs_validated =
-            (this.state.deuterium_deltas_validated && this.state.oxygen_deltas_validated
-                && this.state.datetimes_validated && this.state.dose_weights_validated
+            ((this.state.deuterium_deltas_validated || this.state.minimum_deuterium_deltas)
+                && (this.state.oxygen_deltas_validated || this.state.minimum_oxygen_deltas)
+                && (this.state.datetimes_validated || this.state.minimum_dates)
+                && this.state.dose_weights_validated
                 && this.state.dose_enrichments_validated && this.state.subject_weights_validated
                 && this.state.subject_id);
 
@@ -182,7 +179,18 @@ export class DLWApp extends React.Component<any, DLWState> {
                              change_function={this.handle_dose_weight_change} key={0}/>);
         }
         let results_display: JSX.Element = <div/>;
+        let export_button =
+            <Button className='export-button' intent={Intent.SUCCESS} disabled={true}>EXPORT RESULTS TO CSV</Button>;
         if (this.state.results.results) {
+            let csv_name = this.state.new_csv_name;
+            if (csv_name.slice(-4) != '.csv') {
+                csv_name += '.csv'
+            }
+            export_button = (
+                <a href={this.state.new_csv_url} download={csv_name} className='export-button'>
+                    <Button className='within-link' intent={Intent.SUCCESS} disabled={!(this.state.new_csv_name)}>
+                        EXPORT RESULTS TO CSV</Button>
+                </a>);
             let results_calculations: JSX.Element[] = [];
             let results_error_flags: JSX.Element[] = [];
 
@@ -234,6 +242,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <p className="result-value">{this.state.results.results.calculations.body_fat_percentage[1] + "%"}</p>
                 </div>);
 
+            //@ts-ignore
             function push_calculated_results(element: JSX.Element[], result_set: RCO2_RESULTS) {
                 element.push(
                     <div className='result-pair'>
@@ -271,13 +280,13 @@ export class DLWApp extends React.Component<any, DLWState> {
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.plateau_2h[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_2h[1] + '%'}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_2h[1]}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_180[1]) < 0.05) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_18O[1]) < 0.05) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
-                    <p className="result-label">{this.state.results.results.error_flags.plateau_180[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_180[1] + '%'}</p>
+                    <p className="result-label">{this.state.results.results.error_flags.plateau_18O[0] + ":"}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_18O[1]}</p>
                 </div>);
             error_class = ((parseFloat(this.state.results.results.error_flags.ds_ratio[1]) < 1.070 &&
                 parseFloat(this.state.results.results.error_flags.ds_ratio[1]) > 1) ? error_okay : outside_error_bars);
@@ -290,7 +299,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.ee[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.ee[1] + "%"}</p>
+                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.ee[1]}</p>
                 </div>);
             error_class = ((parseFloat(this.state.results.results.error_flags.ko_kd[1]) < 1.7 &&
                 parseFloat(this.state.results.results.error_flags.ko_kd[1]) > 1.1) ? error_okay : outside_error_bars);
@@ -302,8 +311,12 @@ export class DLWApp extends React.Component<any, DLWState> {
             let chart_data_d_meas = [];
             let chart_data_o18_meas = [];
             for (let i = 0; i < this.state.deuterium_deltas.length; i++) {
-                chart_data_d_meas.push({x: i, y: this.state.deuterium_deltas[i]});
-                chart_data_o18_meas.push({x: i, y: this.state.oxygen_deltas[i]});
+                if (this.state.deuterium_deltas[i] != "") {
+                    chart_data_d_meas.push({x: i, y: this.state.deuterium_deltas[i]});
+                }
+                if (this.state.oxygen_deltas[i] != "") {
+                    chart_data_o18_meas.push({x: i, y: this.state.oxygen_deltas[i]});
+                }
             }
             let deltas_chart: JSX.Element = (
                 <DeltaScatterChart delta_units={this.state.delta_units}
@@ -360,7 +373,6 @@ export class DLWApp extends React.Component<any, DLWState> {
                 </div>
             )
         }
-
         return (
             <Navbar className='dlw-nav'>
                 <Dialog isOpen={this.state.info_overlay_open} canEscapeKeyClose={true} canOutsideClickClose={false}
@@ -480,58 +492,65 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <NumberInput placeholder={"Dilution space ratio"} value={this.state.dilution_space_ratio}
                                          change_function={this.handle_dilution_space_ratio_change} unit={''} index={0}/>
                         </div>
-                        <Button className='calculate-button' onClick={this.submit_inputs} intent={Intent.SUCCESS}
-                                disabled={!all_inputs_validated}>CALCULATE RESULTS</Button>
+                        <Popover isOpen={this.state.missing_data_popup_open} position={Position.TOP}
+                                 className='full-popover-missing-data' key={'missing-data-popover'}>
+                            <Button className='calculate-button' onClick={() => {
+                                if ((this.state.minimum_dates && !this.state.datetimes_validated) ||
+                                    (this.state.minimum_deuterium_deltas && !this.state.deuterium_deltas_validated) ||
+                                    (this.state.minimum_oxygen_deltas && !this.state.oxygen_deltas_validated)) {
+                                    this.setState({missing_data_popup_open: true});
+                                } else {
+                                    this.submit_inputs();
+                                }
+                            }} intent={Intent.SUCCESS} disabled={!all_inputs_validated}>CALCULATE RESULTS</Button>
+                            <div className='popover-missing-data'>
+                                <p>Missing input data detected. Calculate anyway?</p>
+                                <div className='missing-data-confirm-buttons'>
+                                    <Button text={"CALCULATE"} intent={Intent.DANGER} onClick={this.submit_inputs}
+                                            className='missing-data-button' key={'calc-md'}/>
+                                    <Button text={"CANCEL"} intent={Intent.PRIMARY} onClick={() => {
+                                        this.setState({missing_data_popup_open: false})
+                                    }} className='missing-data-button' key={'cancel-md'}/>
+                                </div>
+                            </div>
+                        </Popover>
                     </div>
                     <div className='submit-group'>
                         <div className='csv-input-new'>
-                            <h5>Input a name for a new .csv file</h5>
-                            <InputGroup placeholder='CSV filename' className='csv_input'
-                                        onChange={(event: FormEvent<HTMLElement>) =>
-                                            this.setState({
-                                                              new_csv_name: (event.target as HTMLInputElement).value,
-                                                              append_csv_name: ""
-                                                          })}/>
+                            <h5>Input a custom name for a new .csv file</h5>
+                            <InputGroup placeholder={this.state.new_csv_name ? this.state.new_csv_name : 'CSV filename'}
+                                        className='csv_input' onChange={(event: FormEvent<HTMLElement>) =>
+                                this.setState({
+                                                  new_csv_name: (event.target as HTMLInputElement).value
+                                              })}/>
                         </div>
-                        <div className='csv-append'>
-                            <h5>Or, select an existing .csv file to append results to</h5>
-                            <FileInput text={this.state.append_csv_name || "Choose file..."}
-                                       onInputChange={this.handle_csv_append_choice} className='csv-input'/>
-                        </div>
-                        <Button onClick={this.export} disabled={!(this.state.results.results && (this.state.new_csv_name || this.state.append_csv_name))}
-                                className='export-button' intent={Intent.SUCCESS}>EXPORT TO CSV</Button>
+                        {export_button}
                     </div>
                     {results_display}
                 </FormGroup>
             </Navbar>
-        )
-            ;
+        );
     }
 
     export = async () => {
-        let results = null;
-        if (this.state.new_csv_name.length > 0) {
-            results = await export_to_csv(this.state.new_csv_name);
-        } else {
-            results = await export_to_csv(this.state.append_csv_name);
-        }
-        if (results.error) {
+        let results_blob = await export_to_csv(this.state.new_csv_name);
+        if (results_blob == null) {
             AppToaster.show({
                                 message: "Error exporting results to csv. Please file a bug report at https://github.com/jchmyz/DoublyLabeledWater/issues",
                                 intent: "danger",
                                 timeout: 0
                             });
         } else {
-            AppToaster.show({
-                                message: "Results successfully exported to " + results.saved_file,
-                                intent: "success",
-                                timeout: 3000
-                            });
+            this.setState({new_csv_url: URL.createObjectURL(results_blob)});
         }
     };
 
     submit_inputs = async () => {
+        this.setState({missing_data_popup_open: false});
         let datetimes = this.state.datetimes.map((value: moment.Moment) => {
+            if (value == this.now) {
+                return [1, 0, 1, 1, 1];
+            }
             return value.toArray();
         });
         // months are zero-indexed in Moment.js
@@ -576,6 +595,8 @@ export class DLWApp extends React.Component<any, DLWState> {
             AppToaster.show({
                                 message: "Results calculated successfully", intent: "success", timeout: 3000
                             });
+            // store calculated results in url for csv export
+            await this.export();
             if (this.scroll_anchor_ref.current) this.scroll_anchor_ref.current.scrollIntoView({behavior: "smooth"});
         }
     };
@@ -690,20 +711,6 @@ export class DLWApp extends React.Component<any, DLWState> {
         }
     };
 
-    handle_csv_append_choice = (event: FormEvent<HTMLInputElement>) => {
-        let file = (event.target as any).files[0];
-        console.log(file);
-        if ((file.type === "text/csv" || file.type === "application/vnd.ms-excel") || (file.type === "" && file.name.endsWith(".csv"))) {
-            this.setState({append_csv_name: file.name, new_csv_name: ""});
-        } else {
-            AppToaster.show({
-                                message: "Select an existing .csv file.",
-                                intent: "danger",
-                                timeout: 0
-                            });
-        }
-    };
-
     _bad_format = (specific_error: string) => {
         this.setState({input_csv_name: ""});
         let display_msg = "Incorrect .csv format." + specific_error + " See 'Help' for expected format.";
@@ -748,7 +755,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                 new_deltas.splice(index, 1, value);
                 this.setState({
                                   deuterium_deltas: new_deltas,
-                                  deuterium_deltas_validated: this.check_numerical_inputs(new_deltas)
+                                  deuterium_deltas_validated: this.check_numerical_inputs(new_deltas),
+                                  minimum_deuterium_deltas: check_array_for_missing_values(new_deltas, "")
                               });
             } else this._flag_non_numerical_input();
         } else {
@@ -768,7 +776,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                 new_deltas.splice(index, 1, value);
                 this.setState({
                                   oxygen_deltas: new_deltas,
-                                  oxygen_deltas_validated: this.check_numerical_inputs(new_deltas)
+                                  oxygen_deltas_validated: this.check_numerical_inputs(new_deltas),
+                                  minimum_oxygen_deltas: check_array_for_missing_values(new_deltas, "")
                               });
             } else this._flag_non_numerical_input();
         } else {
@@ -808,6 +817,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             this.setState({
                               datetimes: new_date_array,
                               datetimes_validated: all_dates_filled,
+                              minimum_dates: check_array_for_missing_values(new_date_array, this.now)
                           })
         } else {
             let split_values = value.split(" ");
@@ -822,7 +832,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     if (moment.parseZone(new Date(split_values[i])).isValid()) {
                         if (i < split_values.length - 1) {
                             if (moment.parseZone(new Date(split_values[i + 1])).isValid()) {
-                                //both valid dates- don't need to worry about spaces, treat them as separate dates
+                                // both valid dates- don't need to worry about spaces, treat them as separate dates
                                 let as_moment = convert_string_to_moment(split_values[i]);
                                 if (typeof as_moment !== "boolean") {
                                     this.handle_date_change(index + i, as_moment);
@@ -921,12 +931,13 @@ export class DLWApp extends React.Component<any, DLWState> {
             this.setState({clear_popup_open: true});
         }
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
-        this.setState({subject_id: value});
+        let date = new Date();
+        let date_string = '-' + date.getFullYear() + pad((date.getMonth() + 1)) + pad(date.getDate());
+        this.setState({subject_id: value, new_csv_name: value + date_string + '.csv'});
     };
 
     handle_dilution_space_ratio_change = (index: number, event: FormEvent<HTMLElement> | string) => {
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
         this.setState({dilution_space_ratio: value});
     }
-
 }

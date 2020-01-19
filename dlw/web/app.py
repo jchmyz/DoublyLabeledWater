@@ -4,6 +4,7 @@ import json
 import numpy as np
 import datetime
 import csv
+import click
 
 from dlw import DLWSubject
 
@@ -19,9 +20,11 @@ CALCULATED_RESULTS = None  # type: DLWSubject
 def calculate_from_inputs():
     input_data = json.loads(request.get_data().decode('utf-8'))
     datetimes = [datetime.datetime(l[0], l[1], l[2], l[3], l[4]) for l in input_data['datetimes']]
+    d_meas = [d if d != "" else np.nan for d in input_data['d_meas']]
+    o_meas = [d if d != "" else np.nan for d in input_data['o18_meas']]
     global CALCULATED_RESULTS
-    CALCULATED_RESULTS = DLWSubject(d_meas=np.asarray(input_data['d_meas'], dtype=float),
-                                    o18_meas=np.asarray(input_data['o18_meas'], dtype=float),
+    CALCULATED_RESULTS = DLWSubject(d_meas=np.asarray(d_meas, dtype=float),
+                                    o18_meas=np.asarray(o_meas, dtype=float),
                                     sample_datetimes=np.asarray(datetimes),
                                     dose_weights=np.asarray(input_data['dose_weights'], dtype=float),
                                     mixed_dose=input_data['mixed_dose'],
@@ -48,6 +51,21 @@ def calculate_from_inputs():
             }
         }
 
+    if np.isnan(CALCULATED_RESULTS.d_ratio_percent):
+        plateau_2h = ["2H plateau (<5%)", "N/A (missing data)"]
+    else:
+        plateau_2h = ["2H plateau (<5%)", str(round(CALCULATED_RESULTS.d_ratio_percent, 2)) + "%"]
+
+    if np.isnan(CALCULATED_RESULTS.o18_ratio_percent):
+        plateau_o18 = ["18O Plateau (<5%)", "N/A (missing data)"]
+    else:
+        plateau_o18 = ["18O Plateau (<5%)", str(round(CALCULATED_RESULTS.o18_ratio_percent, 2)) + "%"]
+
+    if np.isnan(CALCULATED_RESULTS.ee_check):
+        ee = ["EE, Schoeller (PD4-ED4 vs. PD5-ED5, <10%)", "N/A (missing data)"]
+    else:
+        ee = ["EE, Schoeller (PD4-ED4 vs. PD5-ED5, <10%)", str(round(CALCULATED_RESULTS.ee_check, 4)) + "%"]
+
     return json.dumps({
         "results": {
             "calculations": {
@@ -62,10 +80,10 @@ def calculate_from_inputs():
                 "body_fat_percentage": ["Body Fat Percentage", round(CALCULATED_RESULTS.body_fat_percent, 1)]
             },
             "error_flags": {
-                "plateau_2h": ["2H plateau (<5%)", round(CALCULATED_RESULTS.d_ratio_percent, 2)],
-                "plateau_180": ["18O Plateau (<5%)", round(CALCULATED_RESULTS.o18_ratio_percent, 2)],
+                "plateau_2h": plateau_2h,
+                "plateau_18O": plateau_o18,
                 "ds_ratio": ["DS ratio (1.000 - 1.070)", round(CALCULATED_RESULTS.dil_space_ratio, 4)],
-                "ee": ["EE, Schoeller (PD4-ED4 vs. PD5-ED5, <10%)", round(CALCULATED_RESULTS.ee_check, 4)],
+                "ee": ee,
                 "ko_kd": ["Ko/kd (1.1 - 1.7)", round(CALCULATED_RESULTS.ko_kd_ratio, 4)]
             },
             "schoeller": sort_calculated_results(CALCULATED_RESULTS.schoeller),
@@ -77,13 +95,7 @@ def calculate_from_inputs():
 
 @app.route('/export', methods=['POST'])
 def export_to_csv():
-    input_data = json.loads(request.get_data().decode('utf-8'))
-    csv_filename = input_data['filename']
-    if csv_filename.endswith('.csv'):
-        saved_file = CALCULATED_RESULTS.save_results_csv(csv_filename)
-    else:
-        saved_file = CALCULATED_RESULTS.save_results_csv(csv_filename + '.csv')
-    return json.dumps({"saved_file": saved_file})
+    return CALCULATED_RESULTS.save_results_csv()
 
 
 @app.route('/load', methods=['POST'])
@@ -101,8 +113,11 @@ def root():
     return send_from_directory(STATICS_LOCATION, 'index.html')
 
 
-def run_app():
-    app.run(debug=False)
+@click.command()
+@click.option('--host', default=None)
+@click.option('--port', default=None)
+def run_app(host, port):
+    app.run(debug=False, host=host, port=port)
 
 
 if __name__ == '__main__':

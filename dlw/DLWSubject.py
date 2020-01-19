@@ -192,7 +192,12 @@ class DLWSubject:
             self.nd = self.calculate_various_nd()
             self.no = self.calculate_various_no()
 
-            self.dil_space_ratio = self.nd['plat_a_mol'] / self.no['plat_a_mol']  # dilution space ratio err flag
+            if not (np.isnan(self.nd['plat_a_mol'])):
+                self.dil_space_ratio = self.nd['plat_a_mol'] / self.no['plat_a_mol']  # dilution space ratio err flag
+            elif not (np.isnan(self.nd['plat_b_mol'])):
+                self.dil_space_ratio = self.nd['plat_b_mol'] / self.no['plat_b_mol']
+            else:
+                raise ValueError('No numerical dilution space values')
 
             # self.rh2o = (self.nd['adj_plat_avg_kg'] * self.kd_per_hr * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
 
@@ -253,7 +258,10 @@ class DLWSubject:
            :param elapsedhours: elapsed time in hours between the intial and final urine measurements
            :return: istope turnover rate in 1/hr
         """
-        if (background < initratio and background < finalratio and finalratio < initratio):
+
+        if (np.isnan(initratio) or np.isnan(finalratio)):
+            return (np.nan)
+        elif (background < initratio and background < finalratio and finalratio < initratio):
             return (np.log(initratio - background) - np.log(finalratio - background)) / elapsedhours
         else:
             raise ValueError('Isotope ratios do not conform to pattern background < final < plateau')
@@ -277,7 +285,7 @@ class DLWSubject:
 
         elapsedhours = (timedelta.total_seconds(sampledatetime[5] - sampledatetime[3])) / 3600
         turnovers[3] = self.isotope_turnover_2pt(ratios[0], ratios[2], ratios[4], elapsedhours)
-        return np.mean(turnovers)
+        return np.nanmean(turnovers)
 
     @staticmethod
     def calculate_mol_masses(dose_enrichments, mixed_dose):
@@ -311,7 +319,7 @@ class DLWSubject:
                                                          self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0])
         nd['plat_b_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
                                                          self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
-        nd['plat_avg_mol'] = (nd['plat_a_mol'] + nd['plat_b_mol']) / 2
+        nd['plat_avg_mol'] = np.nanmean(np.array([nd['plat_a_mol'], nd['plat_b_mol']]))
 
         dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[1]) / 3600
         nd['int_a_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
@@ -321,7 +329,7 @@ class DLWSubject:
         nd['int_b_mol'] = self.dilution_space_intercept(self.dose_weights[0], self.mol_masses[0],
                                                           self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0],
                                                           self.kd_per_hr, dosetime)
-        nd['int_avg_mol'] = (nd['int_a_mol'] + nd['int_b_mol']) / 2
+        nd['int_avg_mol'] = np.nanmean(np.array([nd['int_a_mol'], nd['int_b_mol']]))
 
         nd['adj_plat_avg_mol'] = self.adj_dilution_space(nd['plat_avg_mol'], self.subject_weights)
         nd['adj_int_avg_mol'] = self.adj_dilution_space(nd['int_avg_mol'], self.subject_weights)
@@ -341,7 +349,7 @@ class DLWSubject:
         no['plat_b_mol'] = self.dilution_space_plateau(self.dose_weights[1], self.mol_masses[1],
                                                          self.dose_enrichments[1], self.o18_ratios[2],
                                                          self.o18_ratios[0])
-        no['plat_avg_mol'] = (no['plat_a_mol'] + no['plat_b_mol']) / 2
+        no['plat_avg_mol'] = np.nanmean(np.array([no['plat_a_mol'], no['plat_b_mol']]))
 
         dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[1]) / 3600
         no['int_a_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
@@ -351,7 +359,7 @@ class DLWSubject:
         no['int_b_mol'] = self.dilution_space_intercept(self.dose_weights[1], self.mol_masses[1],
                                                           self.dose_enrichments[1], self.o18_ratios[2],
                                                           self.o18_ratios[0], self.ko_per_hr, dosetime)
-        no['int_avg_mol'] = (no['int_a_mol'] + no['int_b_mol']) / 2
+        no['int_avg_mol'] = np.nanmean(np.array([no['int_a_mol'], no['int_b_mol']]))
 
         no['adj_plat_avg_mol'] = self.adj_dilution_space(no['plat_avg_mol'], self.subject_weights)
         no['adj_int_avg_mol'] = self.adj_dilution_space(no['int_avg_mol'], self.subject_weights)
@@ -579,7 +587,7 @@ class DLWSubject:
         diff = self.percent_difference(tee_a, tee_b)
         return diff
 
-    def save_results_csv(self, filename):
+    def save_results_csv(self, filename=None):
         """ Save the results to a csv file
             :param: filename(string), the name of the file to which to save
         """
@@ -604,11 +612,15 @@ class DLWSubject:
               self.speakman['tee_int_mj_day'], self.speakman['co2_plat_mol_day'], self.speakman['co2_plat_L_hr'],
               self.speakman['tee_plat_kcal_day'], self.speakman['tee_plat_mj_day'], self.d_ratio_percent,
               self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
-        if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
-            file = open(filename, 'a+')
-            np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")
+        if not filename:
+            # return data as string
+            return write_header + '\n' + ','.join([d for d in write_data[0]])
         else:
-            file = open(filename, 'a+')
-            np.savetxt(file, write_data, delimiter=',', header=write_header, comments='', fmt="%s")
-        file.close()
-        return os.path.abspath(filename)
+            if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
+                file = open(filename, 'a+')
+                np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")
+            else:
+                file = open(filename, 'a+')
+                np.savetxt(file, write_data, delimiter=',', header=write_header, comments='', fmt="%s")
+            file.close()
+            return os.path.abspath(filename)
