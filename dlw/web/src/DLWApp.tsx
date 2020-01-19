@@ -863,7 +863,8 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_dose_weight_change = (index: number, event: FormEvent<HTMLElement> | string) => {
-        if (this.state.mixed_dose) {
+        console.log('into it index ', index, event);
+        if (this.state.mixed_dose && index == 0) {
             // if mixed, set both values to this
             this.handle_dose_weight_change(1, event);
         }
