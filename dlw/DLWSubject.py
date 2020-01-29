@@ -51,7 +51,7 @@ class DLWSubject:
            o18_ratios (np.array): 18O ratios of subject samples
            kd_per_hr (float): deuterium turnover rate in 1/hr, calculation type determined by expo_calc input
            ko_per_hr (float): oxygen turnover rate in 1/hr, calculation type determined by expo_calc input
-           ko_kd_ratio_2pt (float): ratio of oxygen and deuterium turnover rates
+           ko_kd_ratio (float): ratio of oxygen and deuterium turnover rates
            nd (dict): dictionary containing all the calculated values of the deuterium dilution space
                 plat_a_mol (float): calculated by the plateau method using the a sample in mol
                 plat_b_mol (float): calculated by the plateau method using the b sample in mol
@@ -203,7 +203,7 @@ class DLWSubject:
                 self.ko_per_hr = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
 
 
-            self.ko_kd_ratio_2pt = self.ko_per_hr / self.kd_per_hr
+            self.ko_kd_ratio = self.ko_per_hr / self.kd_per_hr
             self.mol_masses = self.calculate_mol_masses(self.dose_enrichments, self.mixed_dose)
 
             self.nd = self.calculate_various_nd()
@@ -654,7 +654,7 @@ class DLWSubject:
               self.speakman['co2_int_mol_day'], self.speakman['co2_int_L_day'], self.speakman['tee_int_kcal_day'],
               self.speakman['tee_int_mj_day'], self.speakman['co2_plat_mol_day'], self.speakman['co2_plat_L_hr'],
               self.speakman['tee_plat_kcal_day'], self.speakman['tee_plat_mj_day'], self.d_ratio_percent,
-              self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio_2pt]])
+              self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
         if os.path.isfile(filename):  # if the file already exists, don't rewrite the header
             file = open(filename, 'a+')
             np.savetxt(file, write_data, delimiter=',', comments='', fmt="%s")

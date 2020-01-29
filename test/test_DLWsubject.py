@@ -82,6 +82,16 @@ class TestDLWSubject(TestCase):
         self.assertAlmostEqual(0.00588674101, test_subject.kd_per_hr)
         self.assertAlmostEqual(0.006751644, test_subject.ko_per_hr)
 
+    def test_turnover_exponential(self):
+        # Note that this is the only test with values not based on the excel spreadsheet, since it does not do
+        #  an exponential fit.  This functionality was tested by comparing with the results of an earlier version
+        #  of the program.
+        test_subject = dlw.DLWSubject(D_DELTAS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
+                                      MIXED_DOSE_TEST, DOSE_ENRICHMENTS_TEST, SUBJECT_WEIGHTS_TEST, SUBJECT_ID_TEST,
+                                      expo_calc=True)
+        self.assertAlmostEqual(0.005884750, test_subject.kd_per_hr)
+        self.assertAlmostEqual(0.006748965, test_subject.ko_per_hr)
+
     def test_incorrect_ratios(self):
         with self.assertRaises(ValueError) as context:
             dlw.DLWSubject(INCORRECT_RATIOS_TEST, O18_DELTAS_TEST, SAMPLE_DATETIME_TEST, DOSE_WEIGHTS_TEST,
