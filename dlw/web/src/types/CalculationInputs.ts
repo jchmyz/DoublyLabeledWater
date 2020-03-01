@@ -10,7 +10,8 @@ export interface CalculationInputs {
     subject_id: string,
     mixed_dose: boolean,
     in_permil: boolean,
-    pop_avg_rdil: string|null
+    pop_avg_rdil: string|null,
+    exponential: boolean
 }
 
 export interface LoadedCSVInputs {

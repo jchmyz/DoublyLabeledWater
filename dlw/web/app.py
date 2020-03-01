@@ -32,6 +32,7 @@ def calculate_from_inputs():
                                     subject_weights=np.asarray(input_data['subject_weights'], dtype=float),
                                     subject_id=input_data['subject_id'],
                                     in_permil=input_data['in_permil'],
+                                    expo_calc=input_data['exponential'],
                                     pop_avg_rdil=float(input_data['pop_avg_rdil']) if input_data[
                                         'pop_avg_rdil'] else None)
 

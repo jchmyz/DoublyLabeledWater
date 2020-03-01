@@ -18,6 +18,8 @@ const ELEMENTS = [DEUTERIUM, OXYGEN];
 
 const NUM_SAMPLE_TIMES = 6;
 const NUM_DELTAS = 5;
+const DEFAULT_EXPONENTIAL_SAMPLES = 11;
+const NEW_ROWS = 4;
 export const DATE_LABELS = ['Background', 'Dose', 'PDA', 'PDB', 'EDA', 'EDB'];
 export const SAMPLE_LABELS = [DATE_LABELS[0]].concat(DATE_LABELS.slice(2, 6));
 
@@ -70,6 +72,9 @@ interface DLWState {
     clear_popup_open: boolean;
     missing_data_popup_open: boolean;
 
+    exponential: boolean;
+    num_deltas: number;
+    num_sample_times: number;
     delta_units: DeltaUnits;
     deuterium_deltas: string[],
     oxygen_deltas: string[],
@@ -80,6 +85,7 @@ interface DLWState {
     dilution_space_ratio: string
     subject_id: string;
     mixed_dose: boolean;
+    excluded_samples: boolean[];
 
     deuterium_deltas_validated: boolean,
     oxygen_deltas_validated: boolean,
@@ -110,11 +116,13 @@ export class DLWApp extends React.Component<any, DLWState> {
             input_csv_name: "", info_overlay_open: false, clear_popup_open: false, missing_data_popup_open: false,
 
             delta_units: DeltaUnits.permil,
-            deuterium_deltas: ["", "", "", "", ""], oxygen_deltas: ["", "", "", "", ""],
-            datetimes: [this.now, this.now, this.now, this.now, this.now, this.now],
+            exponential: false, num_deltas: NUM_DELTAS, num_sample_times: NUM_SAMPLE_TIMES,
+            deuterium_deltas: new Array(NUM_DELTAS).fill(""), oxygen_deltas: new Array(NUM_DELTAS).fill(""),
+            datetimes: new Array(NUM_SAMPLE_TIMES).fill(this.now),
             dose_weights: ["", ""], dose_enrichments: ["", ""],
             mixed_dose: false,
             subject_weights: ["", ""], dilution_space_ratio: "", subject_id: "",
+            excluded_samples: new Array(NUM_DELTAS).fill(false),
 
             deuterium_deltas_validated: false, oxygen_deltas_validated: false, datetimes_validated: false,
             dose_weights_validated: false, dose_enrichments_validated: false, subject_weights_validated: false,
@@ -137,25 +145,75 @@ export class DLWApp extends React.Component<any, DLWState> {
         let deuterium_delta_inputs: JSX.Element[] = [];
         let oxygen_delta_inputs: JSX.Element[] = [];
         let collection_time_inputs: JSX.Element[] = [];
-        for (let i = 0; i < NUM_SAMPLE_TIMES; i++) {
-            collection_time_inputs.push(
-                <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
-                                inputProps={{
-                                    className: 'date-input-box .bp3-input',
-                                    placeholder: ' ' + DATE_LABELS[i] + ' sample date and time',
-                                    value: (this.state.datetimes[i] === this.now) ? "" : this.state.datetimes[i].format('YYYY-MM-DD HH:mm')
-                                }}
-                                key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
-            );
-        }
-        for (let i = 0; i < NUM_DELTAS; i++) {
-            deuterium_delta_inputs.push(
-                <NumberInput placeholder={SAMPLE_LABELS[i] + " Deuterium delta"} index={i} key={i}
-                             change_function={this.handle_deuterium_delta_change} unit={this.state.delta_units}
-                             value={this.state.deuterium_deltas[i]}/>);
-            oxygen_delta_inputs.push(
-                <NumberInput placeholder={SAMPLE_LABELS[i] + ' Oxygen 18 delta'} index={i} key={i} unit={this.state.delta_units}
-                             change_function={this.handle_oxygen_delta_change} value={this.state.oxygen_deltas[i]}/>);
+        let include_checkboxes: JSX.Element[] = [];
+        let add_rows_button = <div/>;
+        if (!this.state.exponential) {
+            for (let i = 0; i < NUM_SAMPLE_TIMES; i++) {
+                collection_time_inputs.push(
+                    <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
+                                    inputProps={{
+                                        className: 'date-input-box .bp3-input',
+                                        placeholder: ' ' + DATE_LABELS[i] + ' sample date and time',
+                                        value: (this.state.datetimes[i] === this.now) ? "" : this.state.datetimes[i].format('YYYY-MM-DD HH:mm')
+                                    }}
+                                    key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
+                );
+            }
+            for (let i = 0; i < NUM_DELTAS; i++) {
+                deuterium_delta_inputs.push(
+                    <NumberInput placeholder={SAMPLE_LABELS[i] + " Deuterium delta"} index={i} key={i}
+                                 change_function={this.handle_deuterium_delta_change} unit={this.state.delta_units}
+                                 value={this.state.deuterium_deltas[i]}/>);
+                oxygen_delta_inputs.push(
+                    <NumberInput placeholder={SAMPLE_LABELS[i] + ' Oxygen 18 delta'} index={i} key={i} unit={this.state.delta_units}
+                                 change_function={this.handle_oxygen_delta_change} value={this.state.oxygen_deltas[i]}/>);
+            }
+        } else {
+            for (let i = 0; i < this.state.num_sample_times; i++) {
+                let placeholder = "Sample dose " + (i - 1);
+                if (i == 0) {
+                    placeholder = "Background";
+                } else if (i == 1) {
+                    placeholder = "Dose";
+                }
+                collection_time_inputs.push(
+                    <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
+                                    inputProps={{
+                                        className: this.state.excluded_samples[i - 1] ? 'date-input-box .bp3-input excluded' : 'date-input-box .bp3-input',
+                                        placeholder: placeholder + ' sample date and time',
+                                        value: (this.state.datetimes[i] === this.now) ? "" : this.state.datetimes[i].format('YYYY-MM-DD HH:mm')
+                                    }}
+                                    key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
+                );
+            }
+            for (let i = 0; i < this.state.num_deltas; i++) {
+                let placeholder = "Sample dose " + i;
+                if (i == 0) {
+                    placeholder = "Background";
+                }
+                deuterium_delta_inputs.push(
+                    <NumberInput placeholder={placeholder + " Deuterium delta"} index={i} key={i}
+                                 change_function={this.handle_deuterium_delta_change} unit={this.state.delta_units}
+                                 value={this.state.deuterium_deltas[i]} disabled={this.state.excluded_samples[i]}/>);
+                oxygen_delta_inputs.push(
+                    <NumberInput placeholder={placeholder + ' Oxygen 18 delta'} index={i} key={i} unit={this.state.delta_units}
+                                 change_function={this.handle_oxygen_delta_change} value={this.state.oxygen_deltas[i]}
+                                 disabled={this.state.excluded_samples[i]}/>);
+            }
+            for (let i = 1; i < this.state.num_deltas; i++) {
+                include_checkboxes.push(<Checkbox checked={!this.state.excluded_samples[i]}
+                                                  onChange={() => {
+                                                      let excluded_samples = this.state.excluded_samples;
+                                                      excluded_samples.splice(i, 1, !this.state.excluded_samples[i]);
+                                                      this.setState({excluded_samples: excluded_samples})
+                                                  }
+                                                  }/>);
+            }
+            add_rows_button = (
+                <div className='add-rows-button'>
+                    <Button icon={'add'} large={true} onClick={() => this.add_sample_rows(NEW_ROWS)}
+                            minimal={true}>Add samples</Button>
+                </div>);
         }
         deuterium_delta_inputs.splice(1, 0, <div className='delta-space'/>);
         oxygen_delta_inputs.splice(1, 0, <div className='delta-space'/>);
@@ -432,6 +490,15 @@ export class DLWApp extends React.Component<any, DLWState> {
                                        'id': 'file-input'
                                    }} onInputChange={this.handle_csv_upload}/>
                     </div>
+                    <div className='exponential-checkbox'>
+                        <Checkbox checked={this.state.exponential} labelElement={<h5>Exponential
+                            Fit</h5>} onChange={() => {
+                            if (this.state.num_deltas < DEFAULT_EXPONENTIAL_SAMPLES) {
+                                this.add_sample_rows(6);
+                            }
+                            this.setState({exponential: !this.state.exponential})
+                        }} alignIndicator={Alignment.RIGHT} large={true}/>
+                    </div>
                     <div className='samples'>
                         <div className='date-inputs'>
                             <h5>Collection Dates and Times</h5>
@@ -445,6 +512,9 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <h5>Oxygen 18 Delta Values</h5>
                             {oxygen_delta_inputs}
                         </div>
+                        <div className='include-checkboxes'>
+                            {include_checkboxes}
+                        </div>
                         <div className='delta-unit-radio'>
                             <RadioGroup onChange={(event: FormEvent<HTMLInputElement>) => {
                                 this.setState({delta_units: (event.target as any).value})
@@ -454,6 +524,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                             </RadioGroup>
                         </div>
                     </div>
+                    {add_rows_button}
                     <div className='element-wise-inputs'>
                         <div className='mixed-dose'>
                             <div className='mixed-dose-box'>
@@ -557,10 +628,21 @@ export class DLWApp extends React.Component<any, DLWState> {
         datetimes.map((value: number[]) => {
             return value.splice(1, 1, value[1] + 1);
         });
+        let deuterium_deltas = this.state.deuterium_deltas;
+        let oxygen_deltas = this.state.oxygen_deltas;
+        if (!this.state.exponential) {
+            deuterium_deltas = deuterium_deltas.slice(0, NUM_DELTAS);
+            oxygen_deltas = oxygen_deltas.slice(0, NUM_DELTAS);
+            datetimes = datetimes.slice(0, NUM_SAMPLE_TIMES);
+        } else {
+            deuterium_deltas = deuterium_deltas.filter((v, i) => v != "" && !this.state.excluded_samples[i]);
+            oxygen_deltas = oxygen_deltas.filter((v, i) => v != "" && !this.state.excluded_samples[i]);
+            datetimes = datetimes.filter((v, i) => JSON.stringify(v) != JSON.stringify([1, 1, 1, 1, 1]) && !this.state.excluded_samples[i - 1]);
+        }
         let calculated_results = await calculate_from_inputs(
             {
-                d_meas: this.state.deuterium_deltas,
-                o18_meas: this.state.oxygen_deltas,
+                d_meas: deuterium_deltas,
+                o18_meas: oxygen_deltas,
                 datetimes: datetimes,
                 dose_weights: this.state.dose_weights,
                 dose_enrichments: this.state.dose_enrichments,
@@ -568,7 +650,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                 subject_id: this.state.subject_id,
                 mixed_dose: this.state.mixed_dose,
                 in_permil: (this.state.delta_units === DeltaUnits.permil),
-                pop_avg_rdil: this.state.dilution_space_ratio ? this.state.dilution_space_ratio : null
+                pop_avg_rdil: this.state.dilution_space_ratio ? this.state.dilution_space_ratio : null,
+                exponential: this.state.exponential
             }
         );
         if (calculated_results.results) {
@@ -606,9 +689,9 @@ export class DLWApp extends React.Component<any, DLWState> {
                           clear_popup_open: false,
 
                           input_csv_name: "",
-                          deuterium_deltas: ["", "", "", "", ""],
-                          oxygen_deltas: ["", "", "", "", ""],
-                          datetimes: [this.now, this.now, this.now, this.now, this.now, this.now],
+                          deuterium_deltas: new Array(this.state.num_deltas).fill(""),
+                          oxygen_deltas: new Array(this.state.num_deltas).fill(""),
+                          datetimes: new Array(this.state.num_sample_times).fill(this.now),
                           dose_weights: ["", ""],
                           dose_enrichments: ["", ""],
                           subject_weights: ["", ""],
@@ -728,8 +811,9 @@ export class DLWApp extends React.Component<any, DLWState> {
         }
     };
 
-    check_numerical_inputs = (input_aray: (string | number)[]) => {
-        for (let value of input_aray) {
+    check_numerical_inputs = (input_array: number[] | string[], limit?: number) => {
+        let check_limit = limit ? limit : input_array.length;
+        for (let value of input_array.slice(0, check_limit)) {
             if (isNaN(+value) || value === "") {
                 return false;
             }
@@ -799,8 +883,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                                         timeout: 0
                                     });
                     return;
-                }
-                else if (value.isSame(new_date_array[j])) {
+                } else if (value.isSame(new_date_array[j])) {
                     AppToaster.show({
                                         message: "Duplicate collection dates entered", intent: "danger", timeout: 0
                                     });
@@ -863,7 +946,6 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_dose_weight_change = (index: number, event: FormEvent<HTMLElement> | string) => {
-        console.log('into it index ', index, event);
         if (this.state.mixed_dose && index == 0) {
             // if mixed, set both values to this
             this.handle_dose_weight_change(1, event);
@@ -940,5 +1022,24 @@ export class DLWApp extends React.Component<any, DLWState> {
     handle_dilution_space_ratio_change = (index: number, event: FormEvent<HTMLElement> | string) => {
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
         this.setState({dilution_space_ratio: value});
-    }
+    };
+
+    add_sample_rows = (rows_to_add: number) => {
+        let deuterium_deltas = this.state.deuterium_deltas;
+        let oxygen_deltas = this.state.oxygen_deltas;
+        let datetimes = this.state.datetimes;
+        let excluded_samples = this.state.excluded_samples;
+        deuterium_deltas.splice(-2, 0, ...new Array(rows_to_add).fill(""));
+        oxygen_deltas.splice(-2, 0, ...new Array(rows_to_add).fill(""));
+        datetimes.splice(-2, 0, ...new Array(rows_to_add).fill(this.now));
+        excluded_samples.splice(-2, 0, ...new Array(rows_to_add).fill(false));
+        this.setState({
+                          deuterium_deltas: deuterium_deltas,
+                          oxygen_deltas: oxygen_deltas,
+                          datetimes: datetimes,
+                          num_sample_times: this.state.num_sample_times + rows_to_add,
+                          num_deltas: this.state.num_deltas + rows_to_add,
+                          excluded_samples: excluded_samples
+                      });
+    };
 }
