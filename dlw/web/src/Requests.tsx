@@ -6,10 +6,6 @@ interface CSVResults {
     error?: boolean
 }
 
-export interface CSVExportResults extends CSVResults {
-    saved_file: string
-}
-
 export interface LoadedCSVResults extends CSVResults {
     results: LoadedCSVInputs | null
 }
