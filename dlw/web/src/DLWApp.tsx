@@ -1,6 +1,6 @@
 import * as React from "react";
 import {
-    Popover, FormGroup, Button, Toaster, Position,
+    Popover, FormGroup, Button, Toaster, Position, Tooltip,
     InputGroup, Alignment, FileInput, Dialog, Checkbox, Radio, RadioGroup, Intent
 } from "@blueprintjs/core";
 import * as DateTimePicker from 'react-datetime';
@@ -149,29 +149,32 @@ export class DLWApp extends React.Component<any, DLWState> {
         let include_checkboxes: JSX.Element[] = [];
         let add_rows_button = <div/>;
         if (!this.state.exponential) {
+            let d_deltas = this.state.deuterium_deltas.slice(0, NUM_DELTAS - 2).concat(this.state.deuterium_deltas.slice(-2));
+            let o_deltas = this.state.oxygen_deltas.slice(0, NUM_DELTAS - 2).concat(this.state.oxygen_deltas.slice(-2));
+            let times = this.state.datetimes.slice(0, NUM_SAMPLE_TIMES - 2).concat(this.state.datetimes.slice(-2));
             for (let i = 0; i < NUM_SAMPLE_TIMES; i++) {
                 collection_time_inputs.push(
                     <DateTimePicker onChange={(value) => this.handle_date_change(i, value)}
                                     inputProps={{
                                         className: 'date-input-box .bp3-input',
                                         placeholder: ' ' + DATE_LABELS[i] + ' sample date and time',
-                                        value: (this.state.datetimes[i] === this.now) ? "" : this.state.datetimes[i].format('YYYY-MM-DD HH:mm')
+                                        value: (times[i] === this.now) ? "" : times[i].format('YYYY-MM-DD HH:mm')
                                     }}
-                                    key={i} value={this.state.datetimes[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
+                                    key={i} value={times[i]} dateFormat="YYYY-MM-DD" timeFormat="HH:mm"/>
                 );
             }
             for (let i = 0; i < NUM_DELTAS; i++) {
                 deuterium_delta_inputs.push(
                     <NumberInput placeholder={SAMPLE_LABELS[i] + " Deuterium delta"} index={i} key={i}
                                  change_function={this.handle_deuterium_delta_change} unit={this.state.delta_units}
-                                 value={this.state.deuterium_deltas[i]}/>);
+                                 value={d_deltas[i]}/>);
                 oxygen_delta_inputs.push(
                     <NumberInput placeholder={SAMPLE_LABELS[i] + ' Oxygen 18 delta'} index={i} key={i} unit={this.state.delta_units}
-                                 change_function={this.handle_oxygen_delta_change} value={this.state.oxygen_deltas[i]}/>);
+                                 change_function={this.handle_oxygen_delta_change} value={o_deltas[i]}/>);
             }
         } else {
             for (let i = 0; i < this.state.num_sample_times; i++) {
-                let placeholder = "Sample dose " + (i - 1);
+                let placeholder = "Sample " + (i - 1);
                 if (i == 0) {
                     placeholder = "Background";
                 } else if (i == 1) {
@@ -188,7 +191,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                 );
             }
             for (let i = 0; i < this.state.num_deltas; i++) {
-                let placeholder = "Sample dose " + i;
+                let placeholder = "Sample " + i;
                 if (i == 0) {
                     placeholder = "Background";
                 }
@@ -202,13 +205,16 @@ export class DLWApp extends React.Component<any, DLWState> {
                                  disabled={this.state.excluded_samples[i]}/>);
             }
             for (let i = 1; i < this.state.num_deltas; i++) {
-                include_checkboxes.push(<Checkbox checked={!this.state.excluded_samples[i]}
-                                                  onChange={() => {
-                                                      let excluded_samples = this.state.excluded_samples;
-                                                      excluded_samples.splice(i, 1, !this.state.excluded_samples[i]);
-                                                      this.setState({excluded_samples: excluded_samples})
-                                                  }
-                                                  }/>);
+                include_checkboxes.push(
+                    <Tooltip content='Include in expontial fit' hoverOpenDelay={700}>
+                        <Checkbox checked={!this.state.excluded_samples[i]}
+                                  onChange={() => {
+                                      let excluded_samples = this.state.excluded_samples;
+                                      excluded_samples.splice(i, 1, !this.state.excluded_samples[i]);
+                                      this.setState({excluded_samples: excluded_samples})
+                                  }
+                                  }/>
+                    </Tooltip>);
             }
             add_rows_button = (
                 <div className='add-rows-button'>
@@ -376,7 +382,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                 if (this.state.deuterium_deltas[i] != "" && !this.state.excluded_samples[i]) {
                     chart_data_d_meas.push({x: x_counter_d, y: this.state.deuterium_deltas[i]});
                     x_counter_d++;
-                    if (i != 0) exponential_labels.push('Dose ' + i);
+                    if (i != 0) exponential_labels.push('Sample ' + i);
                 }
                 if (this.state.oxygen_deltas[i] != "" && !this.state.excluded_samples[i]) {
                     chart_data_o18_meas.push({x: x_counter_o, y: this.state.oxygen_deltas[i]});
@@ -641,9 +647,9 @@ export class DLWApp extends React.Component<any, DLWState> {
         let deuterium_deltas = this.state.deuterium_deltas;
         let oxygen_deltas = this.state.oxygen_deltas;
         if (!this.state.exponential) {
-            deuterium_deltas = deuterium_deltas.slice(0, NUM_DELTAS);
-            oxygen_deltas = oxygen_deltas.slice(0, NUM_DELTAS);
-            datetimes = datetimes.slice(0, NUM_SAMPLE_TIMES);
+            deuterium_deltas = deuterium_deltas.slice(0, NUM_DELTAS - 2).concat(deuterium_deltas.slice(-2));
+            oxygen_deltas = oxygen_deltas.slice(0, NUM_DELTAS - 2).concat(oxygen_deltas.slice(-2));
+            datetimes = datetimes.slice(0, NUM_SAMPLE_TIMES -2).concat(datetimes.slice(-2));
         } else {
             deuterium_deltas = deuterium_deltas.filter((v, i) => v != "" && !this.state.excluded_samples[i]);
             oxygen_deltas = oxygen_deltas.filter((v, i) => v != "" && !this.state.excluded_samples[i]);
