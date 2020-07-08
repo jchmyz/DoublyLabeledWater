@@ -19,8 +19,10 @@ HOURS_PER_DAY = 24
 LITERS_PER_MOL = 22.414
 LITERS_PER_MOL_SPEAKMAN = 22.26     # Taken from Speakman et al 2020.
                                     # CO2 is not an ideal gas, so this differs somewhat from the ideal gas law
-WEIR_CONSTANT = 5.7425
+WEIR_CONSTANT1 = 1.106
+WEIR_CONSTANT2 = 3.94
 MJ_PER_KCAL = 4.184 / 1000
+STANDARD_RQ = 0.85
 
 D_PLATEAU_LIMIT = 5.0
 O18_PLATEAU_LIMIT = 5.0
@@ -48,6 +50,7 @@ class DLWSubject:
            dose_enrichments ([float]): dose enrichments in ratio of doses administered, deuterium first, 18O second
            subject_weights ([float]): initial and final weights of the subject in kg
            subject_id ([string]): string identifier for the data
+           rq ([float]): respiratory quotient of subject
            pop_avg_rdil ([float]): population average dilution space ratio, if provided
            in_permil ([bool]): True if measured d and O18 are in permil, false if they are in ppm
            expo_calc ([bool]): True if exponential calculations are requested
@@ -171,7 +174,7 @@ class DLWSubject:
     """
 
     def __init__(self, d_meas, o18_meas, sample_datetimes, dose_weights, mixed_dose, dose_enrichments,
-                 subject_weights, subject_id, in_permil=True, pop_avg_rdil=None, expo_calc=False):
+                 subject_weights, subject_id, in_permil=True, pop_avg_rdil=None, expo_calc=False, rq = STANDARD_RQ):
         """Constructor for the DLWSubject class
            :param d_meas (np.array): deuterium delta values of subject samples
            :param o18_meas (np.array): oxygen 18 delta values of subject samples
@@ -184,6 +187,7 @@ class DLWSubject:
            :param in_permil ([bool]): True if measured d and O18 are in permil, false if they are in ppm
            :param pop_avg_rdil ([float]): population average dilution space to use in the calculations
            :param expo_calc ([bool]): True if exponential calculations are requested
+           :param rq ([float]): respiratory quotient of subject
         """
         if len(d_meas) == len(o18_meas) == len(sample_datetimes) - 1:
 
@@ -193,6 +197,7 @@ class DLWSubject:
             self.dose_enrichments = np.array(dose_enrichments) / 1000000  # convert from ppm to ratio
             self.subject_weights = subject_weights
             self.subject_id = subject_id
+            self.rq = rq
 
             if pop_avg_rdil is None:
                 self.pop_avg_rdil = STD_POP_AVG_RDIL
@@ -679,12 +684,12 @@ class DLWSubject:
         return equation
 
     @staticmethod
-    def co2_to_tee(co2):
+    def co2_to_tee(co2, rq):
         """Convert CO2 production to total energy expenditure in using the equation of Weir, J.B. J Physiol., 109(1-2):1-9, 1949
            :param co2: volume of co2 production in L/day
            :return: total energy expenditure in kcal/day
         """
-        return co2 * WEIR_CONSTANT
+        return co2 * (WEIR_CONSTANT1 + (WEIR_CONSTANT2 / rq))
 
     def tee_calcs(self, equation):
         """Change the units on the tee calculations.
@@ -692,8 +697,8 @@ class DLWSubject:
            :return equation: dict now containing tee measurements
         """
 
-        equation['tee_int_kcal_day'] = self.co2_to_tee(equation['co2_int_L_day'])
-        equation['tee_plat_kcal_day'] = self.co2_to_tee(equation['co2_plat_L_day'])
+        equation['tee_int_kcal_day'] = self.co2_to_tee(equation['co2_int_L_day'], self.rq)
+        equation['tee_plat_kcal_day'] = self.co2_to_tee(equation['co2_plat_L_day'], self.rq)
 
         equation['tee_int_mj_day'] = equation['tee_int_kcal_day'] * MJ_PER_KCAL
         equation['tee_plat_mj_day'] = equation['tee_plat_kcal_day'] * MJ_PER_KCAL
@@ -728,8 +733,8 @@ class DLWSubject:
             speakman2000_a = self.calc_speakman2020adult_co2(self.nd['int_a_mol'], self.no['int_a_mol'], kd_a, ko_a)
             speakman2000_b = self.calc_speakman2020adult_co2(self.nd['int_b_mol'], self.no['int_b_mol'], kd_b, ko_b)
 
-        tee_a = self.co2_to_tee(speakman2000_a * LITERS_PER_MOL_SPEAKMAN * HOURS_PER_DAY)
-        tee_b = self.co2_to_tee(speakman2000_b * LITERS_PER_MOL_SPEAKMAN * HOURS_PER_DAY)
+        tee_a = self.co2_to_tee(speakman2000_a * LITERS_PER_MOL_SPEAKMAN * HOURS_PER_DAY, self.rq)
+        tee_b = self.co2_to_tee(speakman2000_b * LITERS_PER_MOL_SPEAKMAN * HOURS_PER_DAY, self.rq)
 
         diff = self.percent_difference(tee_a, tee_b)
         return diff
