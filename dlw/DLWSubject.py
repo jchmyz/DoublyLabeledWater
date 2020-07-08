@@ -12,10 +12,13 @@ STANDARD_WATER_MOL_MASS = 18.10106 / 1000  # kg
 PPM_TO_RATIO = 1 / 1000000
 POP_DIL_SPACE_D = 1.041
 POP_DIL_SPACE_O = 1.007
-STD_POP_AVG_RDIL = 1.02
+STD_POP_AVG_RDIL = 1.036  # Taken from Speakman et al 2020
+WEIGHT_CUTOFF = 10        # From Speakman et al 2020: weight at which one switches from infant to adult equation
 FAT_FREE_MASS_FACTOR = 0.73
 HOURS_PER_DAY = 24
 LITERS_PER_MOL = 22.414
+LITERS_PER_MOL_SPEAKMAN = 22.26     # Taken from Speakman et al 2020.
+                                    # CO2 is not an ideal gas, so this differs somewhat from the ideal gas law
 WEIR_CONSTANT = 5.7425
 MJ_PER_KCAL = 4.184 / 1000
 
@@ -28,6 +31,7 @@ KO_KD_RATIO_HIGH_LIMIT = 1.7
 
 KD_EXPONENTIAL_TURNOVER_GUESS = 0.004
 KO_EXPONENTIAL_TURNOVER_GUESS = 0.005
+
 
 class DLWSubject:
     """Class for performing Doubly Labeled Water calculations
@@ -124,7 +128,7 @@ class DLWSubject:
                 tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
                             co2 values calculated via Racette and the weight adjusted, average, plateau dilution
                             spaces, in mj/day
-            speakman (dict): dictionary containing all the values calculated using the equation of Speakman, eqn 17.41 (1997)
+            speakman1997 (dict): dictionary containing all the values calculated using the equation of Speakman, eqn 17.41 (1997)
                 co2_int (float): CO2 production rate in mol/hr using the weight adjusted, average, intercept dilution spaces
                 co2_plat (float): CO2 production rate in mol/hr using the weight adjusted, average, plateau dilution spaces
                 co2_int_mol_day (float): CO2 production rate in mol/day using the weight adjusted, average, intercept dilution spaces
@@ -140,6 +144,24 @@ class DLWSubject:
                             spaces, in mj/day
                 tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
                             co2 values calculated via Speakman and the weight adjusted, average, plateau dilution
+                            spaces, in mj/day
+            speakman2020 (dict): dictionary containing all the values calculated using one of the two equations of
+                                Speakman, equation 1 or equation 10 (2020) depending on the average weight of the subject
+                co2_int (float): CO2 production rate in mol/hr using the weight adjusted, average, intercept dilution spaces
+                co2_plat (float): CO2 production rate in mol/hr using the weight adjusted, average, plateau dilution spaces
+                co2_int_mol_day (float): CO2 production rate in mol/day using the weight adjusted, average, intercept dilution spaces
+                co2_int_L_hr (float): CO2 production rate in L/hr using the weight adjusted, average, intercept dilution spaces
+                tee_int_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from co2
+                            values calculated via Speakman 2020 and the weight adjusted, average, intercept dilution
+                            spaces, in kcal/day
+                tee_plat_kcal_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                              co2 values calculated via Speakman 2020 and the weight adjusted, average, plateau dilution
+                              spaces,in kcal/day
+                tee_int_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                            co2 values calculated via Speakman 2020 and the weight adjusted, average, intercept dilution
+                            spaces, in mj/day
+                tee_plat_mj_day (float): Total energy expenditure calculated using the equation of Weir (1949) from
+                            co2 values calculated via Speakman 2020 and the weight adjusted, average, plateau dilution
                             spaces, in mj/day
            d_ratio_percent (float): Percent difference between the a and b delta measurements of deuterium
            o18_ratio_percent (float): Percent difference between the a and b delta measurements of 18O
@@ -177,7 +199,7 @@ class DLWSubject:
             else:
                 self.pop_avg_rdil = pop_avg_rdil
 
-            if (in_permil):
+            if in_permil:
                 self.d_deltas = d_meas
                 self.o18_deltas = o18_meas
                 self.d_ratios = self.d_deltas_to_ratios()
@@ -197,11 +219,10 @@ class DLWSubject:
 
             else:
                 if len(d_meas) != 5:
-                    raise ValueError ("array length incorrect for 2 point turnover calculations")
+                    raise ValueError("array length incorrect for 2 point turnover calculations")
 
                 self.kd_per_hr = self.average_turnover_2pt(self.d_ratios, self.sample_datetimes)
                 self.ko_per_hr = self.average_turnover_2pt(self.o18_ratios, self.sample_datetimes)
-
 
             self.ko_kd_ratio = self.ko_per_hr / self.kd_per_hr
             self.mol_masses = self.calculate_mol_masses(self.dose_enrichments, self.mixed_dose)
@@ -229,7 +250,12 @@ class DLWSubject:
 
             self.schoeller = self.calculate_schoeller()
             self.racette = self.calculate_racette()
-            self.speakman = self.calculate_speakman()
+            self.speakman1997 = self.calculate_speakman1997()
+
+            if (self.subject_weights[0]+self.subject_weights[1])/2 < WEIGHT_CUTOFF:
+                self.speakman2020 = self.calculate_speakman2020infant()
+            else:
+                self.speakman2020 = self.calculate_speakman2020adult()
 
             self.d_ratio_percent = self.percent_difference(self.d_ratios[1] - self.d_ratios[0],
                                                            self.d_ratios[2] - self.d_ratios[0])
@@ -264,7 +290,7 @@ class DLWSubject:
         """Convert 18O ratio values to deltas.
            :return: 18O deltas
         """
-        return ((self.o18_ratios / O18_VSMOW_RATIO - 1) * 1000)
+        return (self.o18_ratios / O18_VSMOW_RATIO - 1) * 1000
 
     @staticmethod
     def isotope_turnover_2pt(background, initratio, finalratio, elapsedhours):
@@ -276,9 +302,9 @@ class DLWSubject:
            :return: istope turnover rate in 1/hr
         """
 
-        if (np.isnan(initratio) or np.isnan(finalratio)):
-            return (np.nan)
-        elif (background < initratio and background < finalratio and finalratio < initratio):
+        if np.isnan(initratio) or np.isnan(finalratio):
+            return np.nan
+        elif background < initratio and background < finalratio and finalratio < initratio:
             return (np.log(initratio - background) - np.log(finalratio - background)) / elapsedhours
         else:
             raise ValueError('Isotope ratios do not conform to pattern background < final < plateau')
@@ -326,7 +352,7 @@ class DLWSubject:
 
     @staticmethod
     def exp_func(x, a, b):
-        #note that there is no y offset term: with background subtraction we assume that there is no y offset
+        # note that there is no y offset term: with background subtraction we assume that there is no y offset
         return a * np.exp(-b * x)
 
     @staticmethod
@@ -360,7 +386,7 @@ class DLWSubject:
         nd['plat_a_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
                                                        self.dose_enrichments[0], self.d_ratios[1], self.d_ratios[0])
         nd['plat_b_mol'] = self.dilution_space_plateau(self.dose_weights[0], self.mol_masses[0],
-                                                         self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
+                                                       self.dose_enrichments[0], self.d_ratios[2], self.d_ratios[0])
         nd['plat_avg_mol'] = np.nanmean(np.array([nd['plat_a_mol'], nd['plat_b_mol']]))
 
         dosetime = timedelta.total_seconds(self.sample_datetimes[2] - self.sample_datetimes[1]) / 3600
@@ -465,7 +491,7 @@ class DLWSubject:
 
     @staticmethod
     def adj_dilution_space(dilution_space, subject_weights):
-        """Adjust the given dilution space by the beginning and end subject weights to produce an average dilution space.
+        """Adjust the given dilution space by the beginning and end subject weights to produce an average dilution space
            :param dilution_space: unadjusted dilution space
            :param subject_weights: array containing before and after subject weights
            :return adj_dilution_space: dilution space in mol adjusted for the subject weight change over the
@@ -529,6 +555,7 @@ class DLWSubject:
            :param no: oxygen dilution space in mol
            :param kd: deuterium turnover rate in 1/hr
            :param ko: oxygen turnover rate in 1/hr
+           :param pop_avg_rdil: population average dilution space to use in the calculations
            :return co2prod: co2 production rate in mol/hr
         """
         r_dil = (pop_avg_rdil + 1.034) / 2
@@ -536,23 +563,54 @@ class DLWSubject:
         co2_prod = (n / 2.078) * (1.01 * ko - 1.01 * kd * r_dil) - 0.0245 * n * 1.05 * (1.01 * ko - 1.01 * kd * r_dil)
         return co2_prod
 
-    def calculate_speakman(self):
+    def calculate_speakman1997(self):
         """Calculate the various rCO2 and TEE values using the equation of Speakman eqn 17.41 (1997)
             :return dict of co2 and tee values from the Speakman equation
         """
-        speakman = {}
-        speakman['co2_int'] = self.calc_speakman_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
-                                                     self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
-        speakman['co2_plat'] = self.calc_speakman_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
-                                                      self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
-        speakman = self.change_units_co2(speakman)
-        speakman = self.tee_calcs(speakman)
+        speakman1997 = {}
+        speakman1997['co2_int'] = self.calc_speakman1997_co2(self.nd['adj_int_avg_mol'], self.no['adj_int_avg_mol'],
+                                                             self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
+        speakman1997['co2_plat'] = self.calc_speakman1997_co2(self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
+                                                              self.kd_per_hr, self.ko_per_hr, self.pop_avg_rdil)
+        speakman1997 = self.change_units_co2(speakman1997)
+        speakman1997 = self.tee_calcs(speakman1997)
 
-        return speakman
+        return speakman1997
 
     @staticmethod
-    def calc_speakman_co2(nd, no, kd, ko, pop_avg_rdil):
+    def calc_speakman1997_co2(nd, no, kd, ko, pop_avg_rdil):
         """Calculate CO2 production in mol/hr using the equation of Speakman eqn 17.41 (1997)
+                from dilution spaces and isotope turnover rates.
+           :param nd: deuterium dilution space in mol
+           :param no: oxygen dilution space in mol
+           :param kd: deuterium turnover rate in 1/hr
+           :param ko: oxygen turnover rate in 1/hr
+           :param pop_avg_rdil: population average dilution space to use in the calculations
+           :return co2prod: co2 production rate in mol/hr
+        """
+        n = (no + (nd / pop_avg_rdil)) / 2
+        co2_prod = (n / 2.078) * (ko - kd * pop_avg_rdil) - (0.0062 * n * kd * pop_avg_rdil)
+        return co2_prod
+
+    def calculate_speakman2020adult(self):
+        """Calculate the various rCO2 and TEE values using the equation of Speakman eqn 1 (2020)
+            :return dict of co2 and tee values from the Speakman equation
+        """
+        speakman2020adult = {}
+        speakman2020adult['co2_int'] = self.calc_speakman2020adult_co2(self.nd['adj_int_avg_mol'],
+                                                                       self.no['adj_int_avg_mol'],
+                                                                       self.kd_per_hr, self.ko_per_hr)
+        speakman2020adult['co2_plat'] = self.calc_speakman2020adult_co2(self.nd['adj_plat_avg_mol'],
+                                                                        self.no['adj_plat_avg_mol'],
+                                                                        self.kd_per_hr, self.ko_per_hr)
+        speakman2020adult = self.change_units_co2(speakman2020adult, True)
+        speakman2020adult = self.tee_calcs(speakman2020adult)
+
+        return speakman2020adult
+
+    @staticmethod
+    def calc_speakman2020adult_co2(nd, no, kd, ko):
+        """Calculate CO2 production in mol/hr using the equation of Speakman eqn 1 (2020)
                 from dilution spaces and isotope turnover rates.
            :param nd: deuterium dilution space in mol
            :param no: oxygen dilution space in mol
@@ -560,23 +618,62 @@ class DLWSubject:
            :param ko: oxygen turnover rate in 1/hr
            :return co2prod: co2 production rate in mol/hr
         """
-        n = (no + (nd / pop_avg_rdil)) / 2
-        co2_prod = (n / 2.078) * (ko - kd * pop_avg_rdil) - (0.0062 * n * kd * pop_avg_rdil)
+        n = ((no / 1.007) + (nd / 1.043)) / 2
+        co2_prod = (n / 2.078) * (1.007 * ko - 1.043 * kd) - 0.0246 * n * 1.05 * (1.007 * ko - 1.043 * kd)
+        return co2_prod
+
+    def calculate_speakman2020infant(self):
+        """Calculate the various rCO2 and TEE values using the equation of Speakman eqn 9 and 10 (2020)
+            :return dict of co2 and tee values from the Speakman equation
+        """
+        ave_weight = (self.subject_weights[0]+self.subject_weights[1])/2
+        speakman2020infant = {}
+        speakman2020infant['co2_int'] = self.calc_speakman2020infant_co2(self.nd['adj_int_avg_mol'],
+                                                                         self.no['adj_int_avg_mol'],
+                                                                         self.kd_per_hr, self.ko_per_hr, ave_weight)
+        speakman2020infant['co2_plat'] = self.calc_speakman2020infant_co2(self.nd['adj_plat_avg_mol'],
+                                                                          self.no['adj_plat_avg_mol'],
+                                                                          self.kd_per_hr, self.ko_per_hr, ave_weight)
+        speakman2020infant = self.change_units_co2(speakman2020infant, True)
+        speakman2020infant = self.tee_calcs(speakman2020infant)
+
+        return speakman2020infant
+
+    @staticmethod
+    def calc_speakman2020infant_co2(nd, no, kd, ko, ave_weight):
+        """Calculate CO2 production in mol/hr using the equation of Speakman eqn 9 and 10 (2020)
+                from dilution spaces and isotope turnover rates.
+           :param nd: deuterium dilution space in mol
+           :param no: oxygen dilution space in mol
+           :param kd: deuterium turnover rate in 1/hr
+           :param ko: oxygen turnover rate in 1/hr
+           :param ave_weight: average weight of the infant subject in kg.  Must be below 10kg.
+           :return co2prod: co2 production rate in mol/hr
+        """
+        dsr = 1.036 - 0.05 * np.exp(-0.5249 * ave_weight)
+        n = no
+        co2_prod = (n / 2.078) * (1.007 * ko - (dsr * 1.007 * kd)) - 0.0246 * n * 1.05 * (1.007 * ko - (dsr * 1.007 * kd))
         return co2_prod
 
     @staticmethod
-    def change_units_co2(equation):
+    def change_units_co2(equation, alt_l_per_mol=False):
         """Change the units on the co2 calculations.
             :param equation: dict with 'co2_int' and 'co2_plat' already calculated in mol/hr
+            :param alt_l_per_mol: if True, use the Speakman 2020 value, otherwise use the standard value
             :return equation: dict now containing co2 in other units
         """
 
         equation['co2_int_mol_day'] = equation['co2_int'] * HOURS_PER_DAY  # rco2 mols/day
-        equation['co2_int_L_hr'] = equation['co2_int'] * LITERS_PER_MOL
-        equation['co2_int_L_day'] = equation['co2_int_L_hr'] * HOURS_PER_DAY  # rco2 l/day
-
         equation['co2_plat_mol_day'] = equation['co2_plat'] * HOURS_PER_DAY
-        equation['co2_plat_L_hr'] = equation['co2_plat'] * LITERS_PER_MOL
+
+        if alt_l_per_mol:
+            equation['co2_int_L_hr'] = equation['co2_int'] * LITERS_PER_MOL_SPEAKMAN
+            equation['co2_plat_L_hr'] = equation['co2_plat'] * LITERS_PER_MOL_SPEAKMAN
+        else:
+            equation['co2_int_L_hr'] = equation['co2_int'] * LITERS_PER_MOL
+            equation['co2_plat_L_hr'] = equation['co2_plat'] * LITERS_PER_MOL
+
+        equation['co2_int_L_day'] = equation['co2_int_L_hr'] * HOURS_PER_DAY  # rco2 l/day
         equation['co2_plat_L_day'] = equation['co2_plat_L_hr'] * HOURS_PER_DAY
 
         return equation
@@ -584,19 +681,19 @@ class DLWSubject:
     @staticmethod
     def co2_to_tee(co2):
         """Convert CO2 production to total energy expenditure in using the equation of Weir, J.B. J Physiol., 109(1-2):1-9, 1949
-           :param co2: volume of co2 production in mol/hr
+           :param co2: volume of co2 production in L/day
            :return: total energy expenditure in kcal/day
         """
-        return co2 * LITERS_PER_MOL * HOURS_PER_DAY * WEIR_CONSTANT
+        return co2 * WEIR_CONSTANT
 
-    def tee_calcs (self, equation):
+    def tee_calcs(self, equation):
         """Change the units on the tee calculations.
            :param equation: dict with co2 previously calculated
            :return equation: dict now containing tee measurements
         """
 
-        equation['tee_int_kcal_day'] = self.co2_to_tee(equation['co2_int'])
-        equation['tee_plat_kcal_day'] = self.co2_to_tee(equation['co2_plat'])
+        equation['tee_int_kcal_day'] = self.co2_to_tee(equation['co2_int_L_day'])
+        equation['tee_plat_kcal_day'] = self.co2_to_tee(equation['co2_plat_L_day'])
 
         equation['tee_int_mj_day'] = equation['tee_int_kcal_day'] * MJ_PER_KCAL
         equation['tee_plat_mj_day'] = equation['tee_plat_kcal_day'] * MJ_PER_KCAL
@@ -606,7 +703,7 @@ class DLWSubject:
     @staticmethod
     def percent_difference(first, second):
         """Calculate the percent difference between two values """
-        return ((first - second) / ((first + second) / 2) * 100)
+        return (first - second) / ((first + second) / 2) * 100
 
     def ee_consistency_check(self):
         """Calculate the percentage difference between the energy expenditure measured using the PD4/ED4 pair and
@@ -621,11 +718,18 @@ class DLWSubject:
         kd_b = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
         ko_b = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
 
-        schoeller_a = self.calc_schoeller_co2(self.nd['int_a_mol'], self.no['int_a_mol'], kd_a, ko_a)
-        schoeller_b = self.calc_schoeller_co2(self.nd['int_b_mol'], self.no['int_b_mol'], kd_b, ko_b)
+        ave_weight = (self.subject_weights[0] + self.subject_weights[1]) / 2
+        if ave_weight < WEIGHT_CUTOFF:
+            speakman2000_a = self.calc_speakman2020infant_co2(self.nd['int_a_mol'], self.no['int_a_mol'],
+                                                              kd_a, ko_a, ave_weight)
+            speakman2000_b = self.calc_speakman2020infant_co2(self.nd['int_b_mol'], self.no['int_b_mol'],
+                                                              kd_b, ko_b, ave_weight)
+        else:
+            speakman2000_a = self.calc_speakman2020adult_co2(self.nd['int_a_mol'], self.no['int_a_mol'], kd_a, ko_a)
+            speakman2000_b = self.calc_speakman2020adult_co2(self.nd['int_b_mol'], self.no['int_b_mol'], kd_b, ko_b)
 
-        tee_a = self.co2_to_tee(schoeller_a)
-        tee_b = self.co2_to_tee(schoeller_b)
+        tee_a = self.co2_to_tee(speakman2000_a * LITERS_PER_MOL_SPEAKMAN * HOURS_PER_DAY)
+        tee_b = self.co2_to_tee(speakman2000_b * LITERS_PER_MOL_SPEAKMAN * HOURS_PER_DAY)
 
         diff = self.percent_difference(tee_a, tee_b)
         return diff
@@ -651,9 +755,9 @@ class DLWSubject:
               self.racette['co2_int_mol_day'], self.racette['co2_int_L_day'], self.racette['tee_int_kcal_day'],
               self.racette['tee_int_mj_day'], self.racette['co2_plat_mol_day'], self.racette['co2_plat_L_hr'],
               self.racette['tee_plat_kcal_day'], self.racette['tee_plat_mj_day'],
-              self.speakman['co2_int_mol_day'], self.speakman['co2_int_L_day'], self.speakman['tee_int_kcal_day'],
-              self.speakman['tee_int_mj_day'], self.speakman['co2_plat_mol_day'], self.speakman['co2_plat_L_hr'],
-              self.speakman['tee_plat_kcal_day'], self.speakman['tee_plat_mj_day'], self.d_ratio_percent,
+              self.speakman1997['co2_int_mol_day'], self.speakman1997['co2_int_L_day'], self.speakman1997['tee_int_kcal_day'],
+              self.speakman1997['tee_int_mj_day'], self.speakman1997['co2_plat_mol_day'], self.speakman1997['co2_plat_L_hr'],
+              self.speakman1997['tee_plat_kcal_day'], self.speakman1997['tee_plat_mj_day'], self.d_ratio_percent,
               self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
         if not filename:
             # return data as string
