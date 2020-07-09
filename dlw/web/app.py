@@ -29,6 +29,7 @@ def calculate_from_inputs():
                                     dose_weights=np.asarray(input_data['dose_weights'], dtype=float),
                                     mixed_dose=input_data['mixed_dose'],
                                     dose_enrichments=np.asarray(input_data['dose_enrichments'], dtype=float),
+                                    rq=input_data['rq'] if input_data['rq'] else None,
                                     subject_weights=np.asarray(input_data['subject_weights'], dtype=float),
                                     subject_id=input_data['subject_id'],
                                     in_permil=input_data['in_permil'],
