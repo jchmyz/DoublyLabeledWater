@@ -225,7 +225,7 @@ class TestDLWSubject(TestCase):
         test_subject.save_results_csv(test_path)
         read_data = np.genfromtxt(test_path, delimiter=',', skip_header=1, dtype=str)
         self.assertEqual('TestSubject', read_data[0])
-        self.assertAlmostEqual(test_subject.no['plat_avg_mol'], float(read_data[4]))
+        self.assertAlmostEqual(test_subject.no['adj_plat_avg_mol'], float(read_data[4]))
         self.assertAlmostEqual(test_subject.body_fat_percent, float(read_data[8]))
         self.assertAlmostEqual(test_subject.speakman2020['tee_int_kcal_day'], float(read_data[11]))
         self.assertAlmostEqual(test_subject.speakman2020['co2_plat_L_day'], float(read_data[14]))
