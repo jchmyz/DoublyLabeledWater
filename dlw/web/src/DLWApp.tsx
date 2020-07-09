@@ -10,7 +10,7 @@ import {FormEvent, RefObject} from "react";
 import {Card, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@blueprintjs/core/lib/cjs";
 import {NumberInput} from "./NumberInput";
 import {convert_string_to_moment, check_array_for_missing_values, pad} from "./utilities";
-import {DeltaScatterChart} from "./DeltaScatterChart";
+import {DeltaScatterChart, ExponentialDeltaScatterChart} from "./DeltaScatterChart";
 import {DeltaUnits} from "./types/CalculationInputs";
 
 const DEUTERIUM = "Deuterium";
@@ -23,6 +23,8 @@ const DEFAULT_EXPONENTIAL_SAMPLES = 11;
 const NEW_ROWS = 4;
 export const DATE_LABELS = ['Background', 'Dose', 'PDA', 'PDB', 'EDA', 'EDB'];
 export const SAMPLE_LABELS = [DATE_LABELS[0]].concat(DATE_LABELS.slice(2, 6));
+
+let DATE_VALIDITY_CHECK_TIMEOUT: any;
 
 interface RCO2_RESULTS {
     rco2_mol_day: string[],
@@ -375,27 +377,60 @@ export class DLWApp extends React.Component<any, DLWState> {
                 </div>);
             let chart_data_d_meas = [];
             let chart_data_o18_meas = [];
-            let x_counter_d = 0;
-            let x_counter_o = 0;
-            let exponential_labels = [DATE_LABELS[0]];
-            for (let i = 0; i < this.state.deuterium_deltas.length; i++) {
-                if (this.state.deuterium_deltas[i] != "" && !this.state.excluded_samples[i]) {
-                    chart_data_d_meas.push({x: x_counter_d, y: this.state.deuterium_deltas[i]});
-                    x_counter_d++;
-                    if (i != 0) exponential_labels.push('Sample ' + i);
+            let deltas_chart;
+            if (!this.state.exponential) {
+                let x_counter_d = 0;
+                let x_counter_o = 0;
+                for (let i = 0; i < this.state.deuterium_deltas.length; i++) {
+                    if (this.state.deuterium_deltas[i] != "" && !this.state.excluded_samples[i]) {
+                        chart_data_d_meas.push({x: x_counter_d, y: this.state.deuterium_deltas[i]});
+                        x_counter_d++;
+                    }
+                    if (this.state.oxygen_deltas[i] != "" && !this.state.excluded_samples[i]) {
+                        chart_data_o18_meas.push({x: x_counter_o, y: this.state.oxygen_deltas[i]});
+                        x_counter_o++;
+                    }
                 }
-                if (this.state.oxygen_deltas[i] != "" && !this.state.excluded_samples[i]) {
-                    chart_data_o18_meas.push({x: x_counter_o, y: this.state.oxygen_deltas[i]});
-                    x_counter_o++;
+                deltas_chart = (
+                    <DeltaScatterChart delta_units={this.state.delta_units} x_labels={SAMPLE_LABELS}
+                                       x_domain={[-0.5, this.state.deuterium_deltas.length - .5]}
+                                       x_ticks={Array.from(Array(this.state.deuterium_deltas.length).keys())}
+                                       chart_data_d_meas={chart_data_d_meas} chart_data_o18_meas={chart_data_o18_meas}/>
+                );
+            } else {
+                let max_date_iso = 0;
+                // background data
+                chart_data_d_meas.push({
+                                           x: this.state.datetimes[0].unix(),
+                                           y: this.state.deuterium_deltas[0]
+                                       });
+                chart_data_o18_meas.push({
+                                             x: this.state.datetimes[0].unix(),
+                                             y: this.state.oxygen_deltas[0]
+                                         });
+
+                for (let i = 1; i < this.state.deuterium_deltas.length; i++) {
+                    if (this.state.deuterium_deltas[i] != "" && !this.state.excluded_samples[i]) {
+                        chart_data_d_meas.push({
+                                                   x: this.state.datetimes[i + 1].unix(),
+                                                   y: this.state.deuterium_deltas[i]
+                                               });
+                        max_date_iso = this.state.datetimes[i].unix();
+                    }
+                    if (this.state.oxygen_deltas[i] != "" && !this.state.excluded_samples[i]) {
+                        chart_data_o18_meas.push({
+                                                     x: this.state.datetimes[i + 1].unix(),
+                                                     y: this.state.oxygen_deltas[i]
+                                                 });
+                    }
                 }
+                deltas_chart = (
+                    <ExponentialDeltaScatterChart delta_units={this.state.delta_units} x_ticks={[]} x_labels={[]}
+                                                  x_domain={[this.state.datetimes[0].unix() - 10000, max_date_iso + 10000]}
+                                                  chart_data_d_meas={chart_data_d_meas}
+                                                  chart_data_o18_meas={chart_data_o18_meas}/>
+                );
             }
-            let num_points = chart_data_d_meas.length;
-            let labels = this.state.exponential ? exponential_labels : SAMPLE_LABELS;
-            let deltas_chart: JSX.Element = (
-                <DeltaScatterChart delta_units={this.state.delta_units} x_domain={[-0.5, num_points - .5]}
-                                   x_ticks={Array.from(Array(num_points).keys())} labels={labels}
-                                   chart_data_d_meas={chart_data_d_meas} chart_data_o18_meas={chart_data_o18_meas}/>
-            );
             results_display = (
                 <div className='results-display' ref={this.scroll_anchor_ref}>
                     <Card className='results-card'>
@@ -516,6 +551,9 @@ export class DLWApp extends React.Component<any, DLWState> {
                         }} alignIndicator={Alignment.RIGHT} large={true}/>
                     </div>
                     <div className='samples'>
+                        <div className='include-checkboxes'>
+                            {include_checkboxes}
+                        </div>
                         <div className='date-inputs'>
                             <h5>Collection Dates and Times</h5>
                             {collection_time_inputs}
@@ -527,9 +565,6 @@ export class DLWApp extends React.Component<any, DLWState> {
                         <div className='delta-inputs'>
                             <h5>Oxygen 18 Delta Values</h5>
                             {oxygen_delta_inputs}
-                        </div>
-                        <div className='include-checkboxes'>
-                            {include_checkboxes}
                         </div>
                         <div className='delta-unit-radio'>
                             <RadioGroup onChange={(event: FormEvent<HTMLInputElement>) => {
@@ -649,7 +684,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         if (!this.state.exponential) {
             deuterium_deltas = deuterium_deltas.slice(0, NUM_DELTAS - 2).concat(deuterium_deltas.slice(-2));
             oxygen_deltas = oxygen_deltas.slice(0, NUM_DELTAS - 2).concat(oxygen_deltas.slice(-2));
-            datetimes = datetimes.slice(0, NUM_SAMPLE_TIMES -2).concat(datetimes.slice(-2));
+            datetimes = datetimes.slice(0, NUM_SAMPLE_TIMES - 2).concat(datetimes.slice(-2));
         } else {
             deuterium_deltas = deuterium_deltas.filter((v, i) => v != "" && !this.state.excluded_samples[i]);
             oxygen_deltas = oxygen_deltas.filter((v, i) => v != "" && !this.state.excluded_samples[i]);
@@ -729,7 +764,6 @@ export class DLWApp extends React.Component<any, DLWState> {
 
     handle_csv_upload = async (event: FormEvent<HTMLInputElement>) => {
         let file = (event.target as any).files[0];
-        console.log(file);
         if ((file.type === "text/csv" || file.type === "application/vnd.ms-excel") || (file.type === "" && file.name.endsWith(".csv"))) {
             let inputs = await load_from_csv(file);
             if (inputs.error || (inputs.results == null)) {
@@ -744,21 +778,22 @@ export class DLWApp extends React.Component<any, DLWState> {
                 let r = inputs.results;
                 let hit_error = false;
                 try {
-                    let inputted_d_deltas = [r.d_meas_1, r.d_meas_2, r.d_meas_3, r.d_meas_4, r.d_meas_5];
-                    let inputted_o_deltas = [r.o_meas_1, r.o_meas_2, r.o_meas_3, r.o_meas_4, r.o_meas_5];
-                    for (let i = 0; i < NUM_DELTAS; i++) {
-                        this.handle_deuterium_delta_change(i, inputted_d_deltas[i]);
-                        this.handle_oxygen_delta_change(i, inputted_o_deltas[i]);
+                    let d_meas = r.d_meas.split(";");
+                    let o_meas = r.o_meas.split(";");
+                    if (d_meas.length > NUM_DELTAS) {
+                        this.add_sample_rows(d_meas.length - NUM_DELTAS);
+                    }
+                    for (let i = 0; i < d_meas.length; i++) {
+                        this.handle_deuterium_delta_change(i, d_meas[i]);
+                        this.handle_oxygen_delta_change(i, o_meas[i]);
                     }
                 } catch (e) {
                     hit_error = true;
                 }
                 try {
-                    let inputted_dates = [r.sample_time_1, r.sample_time_2, r.sample_time_3, r.sample_time_4, r.sample_time_5, r.sample_time_6];
-                    for (let i = 0; i < NUM_SAMPLE_TIMES; i++) {
-                        if (inputted_dates[i]) {
-                            this.handle_date_change(i, inputted_dates[i]);
-                        }
+                    let dates = r.sample_times.split(";");
+                    for (let i = 0; i < dates.length; i++) {
+                        this.handle_date_change(i, dates[i]);
                     }
                 } catch (e) {
                     hit_error = true;
@@ -893,40 +928,40 @@ export class DLWApp extends React.Component<any, DLWState> {
         }
     };
 
+    _check_date_validity = () => {
+        let dates = this.state.datetimes;
+        let chronological_fail = false;
+        let duplicate_fail = false;
+        for (let i = 0; i < dates.length; i++) {
+            for (let j = 0; j < dates.length; j++) {
+                if ((i != j) && (i < j) && !(dates[i] == this.now || dates[j] == this.now)) {
+                    if (!chronological_fail && dates[i].isAfter(dates[j])) {
+                        AppToaster.show({
+                                            message: "Collection dates must be in chronological order.",
+                                            intent: "danger",
+                                            timeout: 3000
+                                        });
+                        this.setState({datetimes_validated: false, minimum_dates: false});
+                        chronological_fail = true;
+                    }
+                    if (!duplicate_fail && dates[i].isSame(dates[j])) {
+                        AppToaster.show({
+                                            message: "Duplicate collection dates entered",
+                                            intent: "danger",
+                                            timeout: 3000
+                                        });
+                        this.setState({datetimes_validated: false, minimum_dates: false});
+                        duplicate_fail = true;
+                    }
+                }
+            }
+        }
+    };
+
     handle_date_change = (index: number, value: string | moment.Moment) => {
         let new_date_array = this.state.datetimes;
         if (typeof value != "string") {
             let all_dates_filled = true;
-            for (let j = 0; j < index; j++) {
-                if ((new_date_array[j] != this.now) && value.isBefore(new_date_array[j])) {
-                    AppToaster.show({
-                                        message: "Collection dates must be in chronological order.",
-                                        intent: "danger",
-                                        timeout: 3000
-                                    });
-                    return;
-                } else if (value.isSame(new_date_array[j])) {
-                    AppToaster.show({
-                                        message: "Duplicate collection dates entered", intent: "danger", timeout: 3000
-                                    });
-                    return;
-                }
-            }
-            for (let j = index + 1; j < this.state.num_sample_times; j++) {
-                if ((new_date_array[j] != this.now) && value.isAfter(new_date_array[j])) {
-                    AppToaster.show({
-                                        message: "Collection dates must be in chronological order.",
-                                        intent: "danger",
-                                        timeout: 3000
-                                    });
-                    return;
-                } else if (value.isSame(new_date_array[j])) {
-                    AppToaster.show({
-                                        message: "Duplicate collection dates entered", intent: "danger", timeout: 3000
-                                    });
-                    return;
-                }
-            }
             new_date_array.splice(index, 1, value);
             if (!this.state.exponential) {
                 for (let i = 0; i < NUM_SAMPLE_TIMES; i++) {
@@ -941,6 +976,11 @@ export class DLWApp extends React.Component<any, DLWState> {
                               datetimes_validated: all_dates_filled,
                               minimum_dates: check_array_for_missing_values(new_date_array, this.now)
                           })
+            // stop any existing timeout so we don't spam with notifications
+            clearTimeout(DATE_VALIDITY_CHECK_TIMEOUT);
+            DATE_VALIDITY_CHECK_TIMEOUT = setTimeout(() => {
+                this._check_date_validity();
+            }, 2000);
         } else {
             let split_values = value.split(" ");
             if (value === "") {

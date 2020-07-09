@@ -19,22 +19,9 @@ export interface CalculationInputs {
 }
 
 export interface LoadedCSVInputs {
-    d_meas_1: string,
-    d_meas_2: string,
-    d_meas_3: string,
-    d_meas_4: string,
-    d_meas_5: string,
-    o_meas_1: string,
-    o_meas_2: string,
-    o_meas_3: string,
-    o_meas_4: string,
-    o_meas_5: string,
-    sample_time_1: string,
-    sample_time_2: string,
-    sample_time_3: string,
-    sample_time_4: string,
-    sample_time_5: string,
-    sample_time_6: string,
+    d_meas: string,
+    o_meas: string,
+    sample_times: string,
     dose_weight_d?: string,
     dose_weight_o?: string,
     dose_weight?: string
