@@ -89,7 +89,8 @@ def calculate_from_inputs():
             },
             "schoeller": sort_calculated_results(CALCULATED_RESULTS.schoeller),
             "racette": sort_calculated_results(CALCULATED_RESULTS.racette),
-            "speakman1997": sort_calculated_results(CALCULATED_RESULTS.speakman1997)
+            "speakman1997": sort_calculated_results(CALCULATED_RESULTS.speakman1997),
+            "speakman2020": sort_calculated_results(CALCULATED_RESULTS.speakman2020)
         }
     })
 

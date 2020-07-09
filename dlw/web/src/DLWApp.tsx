@@ -20,6 +20,7 @@ const ELEMENTS = [DEUTERIUM, OXYGEN];
 const NUM_SAMPLE_TIMES = 6;
 const NUM_DELTAS = 5;
 const DEFAULT_EXPONENTIAL_SAMPLES = 11;
+const DEFAULT_RQ = '0.85';
 const NEW_ROWS = 4;
 export const DATE_LABELS = ['Background', 'Dose', 'PDA', 'PDB', 'EDA', 'EDB'];
 export const SAMPLE_LABELS = [DATE_LABELS[0]].concat(DATE_LABELS.slice(2, 6));
@@ -45,13 +46,7 @@ export interface Results {
             fat_mass_kg: string[],
             body_fat_percentage: string[]
         }
-        schoeller: {
-            rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
-        }
-        racette: {
-            rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
-        }
-        speakman: {
+        speakman2020: {
             rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
         }
         error_flags: {
@@ -79,6 +74,7 @@ interface DLWState {
     datetimes: moment.Moment[],
     dose_weights: string[],
     dose_enrichments: string[],
+    rq: string,
     subject_weights: string[],
     dilution_space_ratio: string
     subject_id: string;
@@ -117,7 +113,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             exponential: false, num_deltas: NUM_DELTAS, num_sample_times: NUM_SAMPLE_TIMES,
             deuterium_deltas: new Array(NUM_DELTAS).fill(""), oxygen_deltas: new Array(NUM_DELTAS).fill(""),
             datetimes: new Array(NUM_SAMPLE_TIMES).fill(this.now),
-            dose_weights: ["", ""], dose_enrichments: ["", ""],
+            dose_weights: ["", ""], dose_enrichments: ["", ""], rq: DEFAULT_RQ,
             mixed_dose: false,
             subject_weights: ["", ""], dilution_space_ratio: "", subject_id: "",
             excluded_samples: new Array(NUM_DELTAS).fill(false),
@@ -261,10 +257,6 @@ export class DLWApp extends React.Component<any, DLWState> {
             let results_calculations: JSX.Element[] = [];
             let results_error_flags: JSX.Element[] = [];
 
-            let results_schoeller_int: JSX.Element[] = [];
-            let results_schoeller_plat: JSX.Element[] = [];
-            let results_racette_int: JSX.Element[] = [];
-            let results_racette_plat: JSX.Element[] = [];
             let results_speakman_int: JSX.Element[] = [];
             let results_speakman_plat: JSX.Element[] = [];
 
@@ -333,13 +325,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                     </div>);
             }
 
-            push_calculated_results(results_schoeller_int, this.state.results.results.schoeller.rco2_ee_int);
-            push_calculated_results(results_schoeller_plat, this.state.results.results.schoeller.rco2_ee_plat);
-            push_calculated_results(results_racette_int, this.state.results.results.racette.rco2_ee_int);
-            push_calculated_results(results_racette_plat, this.state.results.results.racette.rco2_ee_plat);
-            push_calculated_results(results_speakman_int, this.state.results.results.speakman.rco2_ee_int);
-            push_calculated_results(results_speakman_plat, this.state.results.results.speakman.rco2_ee_plat);
-
+            push_calculated_results(results_speakman_int, this.state.results.results.speakman2020.rco2_ee_int);
+            push_calculated_results(results_speakman_plat, this.state.results.results.speakman2020.rco2_ee_plat);
 
             let error_okay = "error-okay";
             let outside_error_bars = "error-not-okay";
@@ -448,26 +435,16 @@ export class DLWApp extends React.Component<any, DLWState> {
                     </Card>
                     <Card className='results-card'>
                         <div className='result-sections calculation-types'>
-                            <div className='result-section'>
-                                <h2>Schoeller</h2>
-                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
-                                {results_schoeller_int}
-                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
-                                {results_schoeller_plat}
-                            </div>
-                            <div className='result-section'>
-                                <h2>Racette</h2>
-                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
-                                {results_racette_int}
-                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
-                                {results_racette_plat}
-                            </div>
-                            <div className='result-section'>
-                                <h2>Speakman</h2>
-                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
-                                {results_speakman_int}
-                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
-                                {results_speakman_plat}
+                            <h2>Speakman (2020)</h2>
+                            <div className='s2020'>
+                                <div className='calc-result'>
+                                    <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
+                                    {results_speakman_int}
+                                </div>
+                                <div className='calc-result'>
+                                    <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
+                                    {results_speakman_plat}
+                                </div>
                             </div>
                         </div>
                     </Card>
@@ -598,6 +575,11 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <h5>{((this.state.mixed_dose) ? 'Mixed Dose Enrichments' : 'Dose Enrichments')}</h5>
                             {dose_enrichment_inputs}
                         </div>
+                        <div className='inputs-by-element'>
+                            <h5>RQ</h5>
+                            <NumberInput placeholder={"RQ"} value={this.state.rq}
+                                         change_function={this.handle_rq_change} unit={''} index={0}/>
+                        </div>
                     </div>
                     <div className='element-wise-inputs'>
                         <div className='inputs-by-element'>
@@ -702,7 +684,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                 mixed_dose: this.state.mixed_dose,
                 in_permil: (this.state.delta_units === DeltaUnits.permil),
                 pop_avg_rdil: this.state.dilution_space_ratio ? this.state.dilution_space_ratio : null,
-                exponential: this.state.exponential
+                exponential: this.state.exponential,
+                rq: this.state.rq
             }
         );
         if (calculated_results.results) {
@@ -710,17 +693,9 @@ export class DLWApp extends React.Component<any, DLWState> {
                               results: {
                                   results: {
                                       calculations: calculated_results.results.calculations,
-                                      schoeller: {
-                                          rco2_ee_int: calculated_results.results.schoeller.rco2_ee_int,
-                                          rco2_ee_plat: calculated_results.results.schoeller.rco2_ee_plat,
-                                      },
-                                      racette: {
-                                          rco2_ee_int: calculated_results.results.racette.rco2_ee_int,
-                                          rco2_ee_plat: calculated_results.results.racette.rco2_ee_plat
-                                      },
-                                      speakman: {
-                                          rco2_ee_int: calculated_results.results.speakman.rco2_ee_int,
-                                          rco2_ee_plat: calculated_results.results.speakman.rco2_ee_plat
+                                      speakman2020: {
+                                          rco2_ee_int: calculated_results.results.speakman2020.rco2_ee_int,
+                                          rco2_ee_plat: calculated_results.results.speakman2020.rco2_ee_plat
                                       },
                                       error_flags: calculated_results.results.error_flags
                                   }
@@ -1101,6 +1076,11 @@ export class DLWApp extends React.Component<any, DLWState> {
     handle_dilution_space_ratio_change = (index: number, event: FormEvent<HTMLElement> | string) => {
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
         this.setState({dilution_space_ratio: value});
+    };
+
+    handle_rq_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
+        this.setState({rq: value});
     };
 
     add_sample_rows = (rows_to_add: number) => {

@@ -10,6 +10,7 @@ export interface CalculationInputs {
     datetimes: number[][],
     dose_weights: string[],
     dose_enrichments: string[],
+    rq: string,
     subject_weights: string[],
     subject_id: string,
     mixed_dose: boolean,
@@ -27,6 +28,7 @@ export interface LoadedCSVInputs {
     dose_weight?: string
     dose_enrichment_d: string,
     dose_enrichment_o: string,
+    rq?: string,
     subject_weight_initial: string,
     subject_weight_final: string,
     subject_id: string,
