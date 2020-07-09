@@ -748,7 +748,7 @@ class DLWSubject:
                         'spk_rCO2_plat_mol/day,spk_rCO2_plat_L/day,spk_EE_plat_kcal/day,spk_EE_plat_MJ/day,'
                         '2H_plateau_%,18O_plateau_%,DS_ratio,EE_consistency_check,ko/kd')
         write_data = np.asarray(
-            [[self.subject_id, self.kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
+            [[self.subject_id, self.kd_per_hr, self.ko_per_hr, self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
               self.total_body_water_ave_kg, self.fat_free_mass_kg, self.fat_mass_kg, self.body_fat_percent,
               self.speakman2020['co2_int_mol_day'], self.speakman2020['co2_int_L_day'], self.speakman2020['tee_int_kcal_day'],
               self.speakman2020['tee_int_mj_day'], self.speakman2020['co2_plat_mol_day'], self.speakman2020['co2_plat_L_day'],
