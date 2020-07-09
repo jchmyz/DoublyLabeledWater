@@ -744,25 +744,15 @@ class DLWSubject:
             :param: filename(string), the name of the file to which to save
         """
         write_header = ('subject_id,kd_hr,ko_hr,Nd_plat_avg_mol,No_plat_avg_mol, TBW_avg_kg,FFM_kg,FM_kg,body_fat_%,'
-                        'sch_rCO2_int_mol/day,sch_rCO2_int_L/day,sch_EE_int_kcal/day,sch_EE_int_MJ/day,'
-                        'sch_rCO2_plat_mol/day,sch_rCO2_plat_L/day,sch_EE_plat_kcal/day,sch_EE_plat_MJ/day,'
-                        'rac_rCO2_int_mol/day,rac_rCO2_int_L/day,rac_EE_int_kcal/day,rac_EE_int_MJ/day,'
-                        'rac_rCO2_plat_mol/day,rac_rCO2_plat_L/day,rac_EE_plat_kcal/day,rac_EE_plat_MJ/day,'
                         'spk_rCO2_int_mol/day,spk_rCO2_int_L/day,spk_EE_int_kcal/day,spk_EE_int_MJ/day,'
                         'spk_rCO2_plat_mol/day,spk_rCO2_plat_L/day,spk_EE_plat_kcal/day,spk_EE_plat_MJ/day,'
                         '2H_plateau_%,18O_plateau_%,DS_ratio,EE_consistency_check,ko/kd')
         write_data = np.asarray(
             [[self.subject_id, self.kd_per_hr, self.ko_per_hr, self.nd['plat_avg_mol'], self.no['plat_avg_mol'],
               self.total_body_water_ave_kg, self.fat_free_mass_kg, self.fat_mass_kg, self.body_fat_percent,
-              self.schoeller['co2_int_mol_day'], self.schoeller['co2_int_L_day'], self.schoeller['tee_int_kcal_day'],
-              self.schoeller['tee_int_mj_day'], self.schoeller['co2_plat_mol_day'], self.schoeller['co2_plat_L_hr'],
-              self.schoeller['tee_plat_kcal_day'], self.schoeller['tee_plat_mj_day'],
-              self.racette['co2_int_mol_day'], self.racette['co2_int_L_day'], self.racette['tee_int_kcal_day'],
-              self.racette['tee_int_mj_day'], self.racette['co2_plat_mol_day'], self.racette['co2_plat_L_hr'],
-              self.racette['tee_plat_kcal_day'], self.racette['tee_plat_mj_day'],
-              self.speakman1997['co2_int_mol_day'], self.speakman1997['co2_int_L_day'], self.speakman1997['tee_int_kcal_day'],
-              self.speakman1997['tee_int_mj_day'], self.speakman1997['co2_plat_mol_day'], self.speakman1997['co2_plat_L_hr'],
-              self.speakman1997['tee_plat_kcal_day'], self.speakman1997['tee_plat_mj_day'], self.d_ratio_percent,
+              self.speakman2020['co2_int_mol_day'], self.speakman2020['co2_int_L_day'], self.speakman2020['tee_int_kcal_day'],
+              self.speakman2020['tee_int_mj_day'], self.speakman2020['co2_plat_mol_day'], self.speakman2020['co2_plat_L_day'],
+              self.speakman2020['tee_plat_kcal_day'], self.speakman2020['tee_plat_mj_day'], self.d_ratio_percent,
               self.o18_ratio_percent, self.dil_space_ratio, self.ee_check, self.ko_kd_ratio]])
         if not filename:
             # return data as string
