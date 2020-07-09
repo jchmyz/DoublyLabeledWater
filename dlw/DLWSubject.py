@@ -257,10 +257,10 @@ class DLWSubject:
             self.racette = self.calculate_racette()
             self.speakman1997 = self.calculate_speakman1997()
 
-            if (self.subject_weights[0]+self.subject_weights[1])/2 < WEIGHT_CUTOFF:
-                self.speakman2020 = self.calculate_speakman2020infant()
-            else:
-                self.speakman2020 = self.calculate_speakman2020adult()
+#            if (self.subject_weights[0]+self.subject_weights[1])/2 < WEIGHT_CUTOFF:
+#                self.speakman2020 = self.calculate_speakman2020infant()
+#            else:
+            self.speakman2020 = self.calculate_speakman2020adult()
 
             self.d_ratio_percent = self.percent_difference(self.d_ratios[1] - self.d_ratios[0],
                                                            self.d_ratios[2] - self.d_ratios[0])
