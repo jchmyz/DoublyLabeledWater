@@ -1,6 +1,6 @@
 # Program for Doubly Labeled Water calculations
 
-This open-source program allows researchers to simply and repeatably perform doubly labeled water calculations and save the results.  All the results have been validated by comparison with a detailed DLW calculation spreadsheet, a copy of which is available in this repo for examination.  The one exception is that the exponential decay calculations were validated by comparison with a previous DLW program version as the spreadsheet does not do exponential fitting.
+This open-source program allows researchers to simply and repeatedly perform doubly labeled water calculations and save the results.  All the results have been validated by comparison with a detailed DLW calculation spreadsheet, a copy of which is available in this repo for examination.  The one exception is that the exponential decay calculations were validated by comparison with a previous DLW program version as the spreadsheet does not do exponential fitting.
 
 The steps undertaken by the program are:
 1) express all isotope enrichments as isotope ratios
