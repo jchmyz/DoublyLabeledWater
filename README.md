@@ -14,3 +14,6 @@ The steps undertaken by the program are:
    c) using the equation of Speakman eqn 17.41 (1997)
 7) convert to total energy expenditure using the equation of Weir , J.B. J Physiol., 109(1-2):1-9, 1949
 8) optionally save the data to csv
+
+## Example input CSVs
+See `DoublyLabeledWater/test/test-input.csv` and `DoublyLabeledWater/test/test-exponential.csv` for the expected CSV input format that the program expects. Column order does not matter; exact column names do. 
