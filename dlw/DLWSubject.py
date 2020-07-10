@@ -723,15 +723,15 @@ class DLWSubject:
         kd_b = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
         ko_b = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
 
-        ave_weight = (self.subject_weights[0] + self.subject_weights[1]) / 2
-        if ave_weight < WEIGHT_CUTOFF:
-            speakman2000_a = self.calc_speakman2020infant_co2(self.nd['int_a_mol'], self.no['int_a_mol'],
-                                                              kd_a, ko_a, ave_weight)
-            speakman2000_b = self.calc_speakman2020infant_co2(self.nd['int_b_mol'], self.no['int_b_mol'],
-                                                              kd_b, ko_b, ave_weight)
-        else:
-            speakman2000_a = self.calc_speakman2020adult_co2(self.nd['int_a_mol'], self.no['int_a_mol'], kd_a, ko_a)
-            speakman2000_b = self.calc_speakman2020adult_co2(self.nd['int_b_mol'], self.no['int_b_mol'], kd_b, ko_b)
+        #ave_weight = (self.subject_weights[0] + self.subject_weights[1]) / 2
+        # if ave_weight < WEIGHT_CUTOFF:
+        #     speakman2000_a = self.calc_speakman2020infant_co2(self.nd['int_a_mol'], self.no['int_a_mol'],
+        #                                                       kd_a, ko_a, ave_weight)
+        #     speakman2000_b = self.calc_speakman2020infant_co2(self.nd['int_b_mol'], self.no['int_b_mol'],
+        #                                                       kd_b, ko_b, ave_weight)
+        # else:
+        speakman2000_a = self.calc_speakman2020adult_co2(self.nd['int_a_mol'], self.no['int_a_mol'], kd_a, ko_a)
+        speakman2000_b = self.calc_speakman2020adult_co2(self.nd['int_b_mol'], self.no['int_b_mol'], kd_b, ko_b)
 
         tee_a = self.co2_to_tee(speakman2000_a * LITERS_PER_MOL_SPEAKMAN * HOURS_PER_DAY, self.rq)
         tee_b = self.co2_to_tee(speakman2000_b * LITERS_PER_MOL_SPEAKMAN * HOURS_PER_DAY, self.rq)
