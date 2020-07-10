@@ -480,8 +480,31 @@ export class DLWApp extends React.Component<any, DLWState> {
                             this.setState({info_overlay_open: false})
                         }}
                         title={'How to use the Doubly Labeled Water App'}>
+                    <p className='help-paragraph'>Enter inputs manually, or upload subject inputs from a custom CSV file.
+                        For the CSV format that the program expects, see
+                        <a href="https://github.com/jchmyz/DoublyLabeledWater#example-input-csvs"> the GitHub repo</a>.</p>
+                    <p className='help-paragraph'>When entering inputs manually, multiple inputs can be copied and
+                        pasted simultaneously into the program. For example, select and copy multiple cells containing
+                        deuterium delta values from a spreadsheet, place your cursor into the input box for the first
+                        value you are copying, and paste. </p>
+                    <p className='help-paragraph'>Once you have entered all of the required input values, the 'Calculate
+                        Results' button will be active. Press 'Calculate Results' to calculate error flags and results using the
+                        Speakman (2020) equation, and view a graph showing the measured enrichments. If you change an input,
+                        recalculate using 'Calculate Results'. Once the results appear appropriate based on the display, you
+                    can save your results to a CSV file using 'Export Results to CSV'. The program provides a default CSV
+                    filename based on the subject ID and date, or you can customize the filename yourself.</p>
+                    <p className='help-paragraph'>Exponential Fitting: Use the 'Exponential Fit' checkbox to switch to
+                    calculating an exponential fit. When calculating an exponential fit, add more data rows using the 'Add
+                    samples' button. The checkboxes to the left of the sample rows indicate whether the sample will be used
+                    in the exponential fit.</p>
                     <p className='help-paragraph'>Mixed Dose: If checked, enter 18O and 2H enrichments of the dose as
                         measured <strong>after</strong> mixing.</p>
+                    <p className='help-paragraph'>RQ: If left blank, the RQ value used is 0.85.</p>
+                    <p className='help-paragraph'>Population Dilution Space Ratio: If left blank, the
+                        population dilution space ratio value used is 1.036.</p>
+                    <p className='help-paragraph'>Help us improve the DLW program: please report any issues or
+                        feature requests at <a href="https://github.com/jchmyz/DoublyLabeledWater/issues">our open source
+                    repository</a>.</p>
                 </Dialog>
                 <NavbarGroup align={Alignment.LEFT}>
                     <Navbar.Heading className='dlw-title'>Doubly Labeled Water</Navbar.Heading>
