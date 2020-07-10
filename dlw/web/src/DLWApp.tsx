@@ -365,6 +365,10 @@ export class DLWApp extends React.Component<any, DLWState> {
             let chart_data_d_meas = [];
             let chart_data_o18_meas = [];
             let deltas_chart;
+            let delta_units = this.state.delta_units.toString();
+            if (delta_units == 'permil') {
+                delta_units = '‰';
+            }
             if (!this.state.exponential) {
                 let x_counter_d = 0;
                 let x_counter_o = 0;
@@ -379,13 +383,22 @@ export class DLWApp extends React.Component<any, DLWState> {
                     }
                 }
                 deltas_chart = (
-                    <DeltaScatterChart delta_units={this.state.delta_units} x_labels={SAMPLE_LABELS}
+                    <DeltaScatterChart delta_units={delta_units} x_labels={SAMPLE_LABELS}
                                        x_domain={[-0.5, this.state.deuterium_deltas.length - .5]}
                                        x_ticks={Array.from(Array(this.state.deuterium_deltas.length).keys())}
                                        chart_data_d_meas={chart_data_d_meas} chart_data_o18_meas={chart_data_o18_meas}/>
                 );
             } else {
                 let max_date_iso = 0;
+                // first, middle and last dates, approx
+                let labels = [this.state.datetimes[0].format('YYYY-MM-DD')];
+                labels.push(this.state.datetimes[this.state.datetimes.length / 2].format('YYYY-MM-DD'));
+                labels.push(this.state.datetimes[this.state.datetimes.length - 1].format('YYYY-MM-DD'));
+
+                let ticks = [this.state.datetimes[0].unix()];
+                ticks.push(this.state.datetimes[this.state.datetimes.length / 2].unix());
+                ticks.push(this.state.datetimes[this.state.datetimes.length - 1].unix());
+
                 // background data
                 chart_data_d_meas.push({
                                            x: this.state.datetimes[0].unix(),
@@ -412,7 +425,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     }
                 }
                 deltas_chart = (
-                    <ExponentialDeltaScatterChart delta_units={this.state.delta_units} x_ticks={[]} x_labels={[]}
+                    <ExponentialDeltaScatterChart delta_units={delta_units} x_ticks={ticks} x_labels={labels}
                                                   x_domain={[this.state.datetimes[0].unix() - 10000, max_date_iso + 10000]}
                                                   chart_data_d_meas={chart_data_d_meas}
                                                   chart_data_o18_meas={chart_data_o18_meas}/>

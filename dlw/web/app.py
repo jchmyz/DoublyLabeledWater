@@ -29,7 +29,7 @@ def calculate_from_inputs():
                                     dose_weights=np.asarray(input_data['dose_weights'], dtype=float),
                                     mixed_dose=input_data['mixed_dose'],
                                     dose_enrichments=np.asarray(input_data['dose_enrichments'], dtype=float),
-                                    rq=input_data['rq'] if input_data['rq'] else None,
+                                    rq=float(input_data['rq']) if input_data['rq'] else None,
                                     subject_weights=np.asarray(input_data['subject_weights'], dtype=float),
                                     subject_id=input_data['subject_id'],
                                     in_permil=input_data['in_permil'],
@@ -64,9 +64,9 @@ def calculate_from_inputs():
         plateau_o18 = ["18O Plateau (<5%)", str(round(CALCULATED_RESULTS.o18_ratio_percent, 2)) + "%"]
 
     if np.isnan(CALCULATED_RESULTS.ee_check):
-        ee = ["EE, Schoeller (PD4-ED4 vs. PD5-ED5, <10%)", "N/A (missing data)"]
+        ee = ["EE (PD4-ED4 vs. PD5-ED5, <10%)", "N/A (missing data)"]
     else:
-        ee = ["EE, Schoeller (PD4-ED4 vs. PD5-ED5, <10%)", str(round(CALCULATED_RESULTS.ee_check, 4)) + "%"]
+        ee = ["EE (PD4-ED4 vs. PD5-ED5, <10%)", str(round(CALCULATED_RESULTS.ee_check, 4)) + "%"]
 
     return json.dumps({
         "results": {
