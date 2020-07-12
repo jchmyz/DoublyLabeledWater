@@ -12,6 +12,16 @@ class CustomizedAxisTick extends React.PureComponent<any> {
     }
 }
 
+class ExponentialCustomizedAxisTick extends React.PureComponent<any> {
+    render() {
+        return (
+            <g transform={`translate(${this.props.x},${this.props.y})`}>
+                <text x={0} y={0} dy={16} textAnchor="end" fill="#666" transform="rotate(-35)">{this.props.labels[this.props.index]}</text>
+            </g>
+        );
+    }
+}
+
 interface DeltaScatterChartProps {
     delta_units: string
     chart_data_d_meas: object[]
@@ -31,9 +41,11 @@ export class DeltaScatterChart extends React.Component<DeltaScatterChartProps> {
                        domain={this.props.x_domain} tick={<CustomizedAxisTick labels={this.props.x_labels}/>}
                        ticks={this.props.x_ticks} interval={0} height={50}/>
                 <YAxis yAxisId="2H" type="number" dataKey="y" name="Measured 2H" domain={[-200, 1000]}
-                       unit={' ' + this.props.delta_units} ticks={[0, 200, 400, 600, 800]}/>
+                       unit={' ' + this.props.delta_units} ticks={[0, 200, 400, 600, 800]}
+                       tick={{stroke: '#ff9900'}}/>
                 <YAxis yAxisId="O18" type="number" dataKey="y" name="Measured O18" domain={[-25, 125]}
-                       ticks={[0, 25, 50, 75, 100]} unit={' ' + this.props.delta_units} orientation="right"/>
+                       ticks={[0, 25, 50, 75, 100]} unit={' ' + this.props.delta_units} orientation="right"
+                       tick={{stroke: '#0000ff'}}/>
                 <Tooltip formatter={(value) => {
                     return typeof value === "number" ? this.props.x_labels[value] : value;
                 }}/>
@@ -50,13 +62,16 @@ export class ExponentialDeltaScatterChart extends React.Component<DeltaScatterCh
         return (
             <ScatterChart height={400} width={Math.min(700, 100 * this.props.chart_data_d_meas.length)}
                           margin={{top: 20, right: 5, bottom: 20, left: 20}}>
-                <CartesianGrid strokeDasharray="3 3"/>
-                <XAxis type="number" dataKey="x" name="Time of Collection" tick={false}
-                       domain={this.props.x_domain} height={50} interval={0}/>
+                <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+                <XAxis type="number" dataKey="x" name="Time of Collection"
+                       domain={this.props.x_domain} height={50} interval={0} ticks={this.props.x_ticks}
+                       tick={<ExponentialCustomizedAxisTick labels={this.props.x_labels}/>}/>
                 <YAxis yAxisId="2H" type="number" dataKey="y" name="Measured 2H" domain={[-200, 1000]}
-                       unit={' ' + this.props.delta_units} ticks={[0, 200, 400, 600, 800]}/>
+                       unit={' ' + this.props.delta_units} ticks={[0, 200, 400, 600, 800]}
+                       tick={{stroke: '#ff9900'}}/>
                 <YAxis yAxisId="O18" type="number" dataKey="y" name="Measured O18" domain={[-25, 125]}
-                       ticks={[0, 25, 50, 75, 100]} unit={' ' + this.props.delta_units} orientation="right"/>
+                       ticks={[0, 25, 50, 75, 100]} unit={' ' + this.props.delta_units} orientation="right"
+                       tick={{stroke: '#0000ff'}}/>
                 <Tooltip formatter={(value) => {
                     return typeof value === "number" ? moment(value, 'X').format('YYYY-MM-DD HH:mm') : value;
                 }}/>

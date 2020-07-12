@@ -20,6 +20,7 @@ const ELEMENTS = [DEUTERIUM, OXYGEN];
 const NUM_SAMPLE_TIMES = 6;
 const NUM_DELTAS = 5;
 const DEFAULT_EXPONENTIAL_SAMPLES = 11;
+const DEFAULT_RQ = '0.85';
 const NEW_ROWS = 4;
 export const DATE_LABELS = ['Background', 'Dose', 'PDA', 'PDB', 'EDA', 'EDB'];
 export const SAMPLE_LABELS = [DATE_LABELS[0]].concat(DATE_LABELS.slice(2, 6));
@@ -45,13 +46,7 @@ export interface Results {
             fat_mass_kg: string[],
             body_fat_percentage: string[]
         }
-        schoeller: {
-            rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
-        }
-        racette: {
-            rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
-        }
-        speakman: {
+        speakman2020: {
             rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
         }
         error_flags: {
@@ -79,6 +74,7 @@ interface DLWState {
     datetimes: moment.Moment[],
     dose_weights: string[],
     dose_enrichments: string[],
+    rq: string,
     subject_weights: string[],
     dilution_space_ratio: string
     subject_id: string;
@@ -117,7 +113,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             exponential: false, num_deltas: NUM_DELTAS, num_sample_times: NUM_SAMPLE_TIMES,
             deuterium_deltas: new Array(NUM_DELTAS).fill(""), oxygen_deltas: new Array(NUM_DELTAS).fill(""),
             datetimes: new Array(NUM_SAMPLE_TIMES).fill(this.now),
-            dose_weights: ["", ""], dose_enrichments: ["", ""],
+            dose_weights: ["", ""], dose_enrichments: ["", ""], rq: DEFAULT_RQ,
             mixed_dose: false,
             subject_weights: ["", ""], dilution_space_ratio: "", subject_id: "",
             excluded_samples: new Array(NUM_DELTAS).fill(false),
@@ -261,10 +257,6 @@ export class DLWApp extends React.Component<any, DLWState> {
             let results_calculations: JSX.Element[] = [];
             let results_error_flags: JSX.Element[] = [];
 
-            let results_schoeller_int: JSX.Element[] = [];
-            let results_schoeller_plat: JSX.Element[] = [];
-            let results_racette_int: JSX.Element[] = [];
-            let results_racette_plat: JSX.Element[] = [];
             let results_speakman_int: JSX.Element[] = [];
             let results_speakman_plat: JSX.Element[] = [];
 
@@ -333,23 +325,20 @@ export class DLWApp extends React.Component<any, DLWState> {
                     </div>);
             }
 
-            push_calculated_results(results_schoeller_int, this.state.results.results.schoeller.rco2_ee_int);
-            push_calculated_results(results_schoeller_plat, this.state.results.results.schoeller.rco2_ee_plat);
-            push_calculated_results(results_racette_int, this.state.results.results.racette.rco2_ee_int);
-            push_calculated_results(results_racette_plat, this.state.results.results.racette.rco2_ee_plat);
-            push_calculated_results(results_speakman_int, this.state.results.results.speakman.rco2_ee_int);
-            push_calculated_results(results_speakman_plat, this.state.results.results.speakman.rco2_ee_plat);
-
+            push_calculated_results(results_speakman_int, this.state.results.results.speakman2020.rco2_ee_int);
+            push_calculated_results(results_speakman_plat, this.state.results.results.speakman2020.rco2_ee_plat);
 
             let error_okay = "error-okay";
             let outside_error_bars = "error-not-okay";
-            let error_class = ((parseFloat(this.state.results.results.error_flags.plateau_2h[1]) < 0.05) ? error_okay : outside_error_bars);
+            let error_class = ((parseFloat(this.state.results.results.error_flags.plateau_2h[1]) < 5 &&
+                parseFloat(this.state.results.results.error_flags.plateau_2h[1]) > -5) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.plateau_2h[0] + ":"}</p>
                     <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_2h[1]}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_18O[1]) < 0.05) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_18O[1]) < 5 &&
+                parseFloat(this.state.results.results.error_flags.plateau_18O[1]) > -5) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.plateau_18O[0] + ":"}</p>
@@ -362,7 +351,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <p className="result-label">{this.state.results.results.error_flags.ds_ratio[0] + ":"}</p>
                     <p className={"result-value " + error_class}>{this.state.results.results.error_flags.ds_ratio[1]}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.results.error_flags.ee[1]) < 10) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.ee[1]) < 10 &&
+                parseFloat(this.state.results.results.error_flags.ee[1]) > -10) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.ee[0] + ":"}</p>
@@ -378,27 +368,39 @@ export class DLWApp extends React.Component<any, DLWState> {
             let chart_data_d_meas = [];
             let chart_data_o18_meas = [];
             let deltas_chart;
+            let delta_units = this.state.delta_units.toString();
+            if (delta_units == 'permil') {
+                delta_units = '‰';
+            }
             if (!this.state.exponential) {
-                let x_counter_d = 0;
-                let x_counter_o = 0;
-                for (let i = 0; i < this.state.deuterium_deltas.length; i++) {
+                let x_counter = 0;
+                let i = 0;
+                while (x_counter < NUM_DELTAS) {
+                    // assume that we include the same samples for deuterium and o18
                     if (this.state.deuterium_deltas[i] != "" && !this.state.excluded_samples[i]) {
-                        chart_data_d_meas.push({x: x_counter_d, y: this.state.deuterium_deltas[i]});
-                        x_counter_d++;
+                        chart_data_d_meas.push({x: x_counter, y: this.state.deuterium_deltas[i]});
+                        chart_data_o18_meas.push({x: x_counter, y: this.state.oxygen_deltas[i]});
+                        x_counter++;
                     }
-                    if (this.state.oxygen_deltas[i] != "" && !this.state.excluded_samples[i]) {
-                        chart_data_o18_meas.push({x: x_counter_o, y: this.state.oxygen_deltas[i]});
-                        x_counter_o++;
-                    }
+                    i++;
                 }
                 deltas_chart = (
-                    <DeltaScatterChart delta_units={this.state.delta_units} x_labels={SAMPLE_LABELS}
-                                       x_domain={[-0.5, this.state.deuterium_deltas.length - .5]}
-                                       x_ticks={Array.from(Array(this.state.deuterium_deltas.length).keys())}
+                    <DeltaScatterChart delta_units={delta_units} x_labels={SAMPLE_LABELS}
+                                       x_domain={[-0.5, NUM_DELTAS - .5]}
+                                       x_ticks={Array.from(Array(NUM_DELTAS).keys())}
                                        chart_data_d_meas={chart_data_d_meas} chart_data_o18_meas={chart_data_o18_meas}/>
                 );
             } else {
                 let max_date_iso = 0;
+                // first, middle and last dates, approx
+                let labels = [this.state.datetimes[0].format('YYYY-MM-DD')];
+                labels.push(this.state.datetimes[this.state.datetimes.length / 2].format('YYYY-MM-DD'));
+                labels.push(this.state.datetimes[this.state.datetimes.length - 1].format('YYYY-MM-DD'));
+
+                let ticks = [this.state.datetimes[0].unix()];
+                ticks.push(this.state.datetimes[this.state.datetimes.length / 2].unix());
+                ticks.push(this.state.datetimes[this.state.datetimes.length - 1].unix());
+
                 // background data
                 chart_data_d_meas.push({
                                            x: this.state.datetimes[0].unix(),
@@ -425,7 +427,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     }
                 }
                 deltas_chart = (
-                    <ExponentialDeltaScatterChart delta_units={this.state.delta_units} x_ticks={[]} x_labels={[]}
+                    <ExponentialDeltaScatterChart delta_units={delta_units} x_ticks={ticks} x_labels={labels}
                                                   x_domain={[this.state.datetimes[0].unix() - 10000, max_date_iso + 10000]}
                                                   chart_data_d_meas={chart_data_d_meas}
                                                   chart_data_o18_meas={chart_data_o18_meas}/>
@@ -448,26 +450,16 @@ export class DLWApp extends React.Component<any, DLWState> {
                     </Card>
                     <Card className='results-card'>
                         <div className='result-sections calculation-types'>
-                            <div className='result-section'>
-                                <h2>Schoeller</h2>
-                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
-                                {results_schoeller_int}
-                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
-                                {results_schoeller_plat}
-                            </div>
-                            <div className='result-section'>
-                                <h2>Racette</h2>
-                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
-                                {results_racette_int}
-                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
-                                {results_racette_plat}
-                            </div>
-                            <div className='result-section'>
-                                <h2>Speakman</h2>
-                                <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
-                                {results_speakman_int}
-                                <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
-                                {results_speakman_plat}
+                            <h2>Speakman (2020)</h2>
+                            <div className='s2020'>
+                                <div className='calc-result'>
+                                    <h5 className='result-header-calc'>rCO2 and EE, intercept method</h5>
+                                    {results_speakman_int}
+                                </div>
+                                <div className='calc-result'>
+                                    <h5 className='result-header-calc'>rCO2 and EE, plateau method</h5>
+                                    {results_speakman_plat}
+                                </div>
                             </div>
                         </div>
                     </Card>
@@ -490,8 +482,44 @@ export class DLWApp extends React.Component<any, DLWState> {
                             this.setState({info_overlay_open: false})
                         }}
                         title={'How to use the Doubly Labeled Water App'}>
+                    <p className='help-paragraph'>Enter inputs manually, or upload subject inputs from a custom CSV
+                        file.
+                        For the CSV format that the program expects, see
+                        <a href="https://github.com/jchmyz/DoublyLabeledWater#example-input-csvs"> the GitHub repo</a>.
+                    </p>
+                    <p className='help-paragraph'>When entering inputs manually, multiple inputs can be copied and
+                        pasted simultaneously into the program. For example, select and copy multiple cells containing
+                        deuterium delta values from a spreadsheet, place your cursor into the input box for the first
+                        value you are copying, and paste. </p>
+                    <p className='help-paragraph'>Once you have entered all of the required input values, the 'Calculate
+                        Results' button will be active. Press 'Calculate Results' to calculate error flags and results
+                        using the
+                        Speakman (2020) equation, and view a graph showing the measured enrichments. If you change an
+                        input,
+                        recalculate using 'Calculate Results'. Once the results appear appropriate based on the display,
+                        you
+                        can save your results to a CSV file using 'Export Results to CSV'. The program provides a
+                        default CSV
+                        filename based on the subject ID and date, or you can customize the filename yourself.</p>
+                    <p className='help-paragraph'>Exponential Fitting: The program loads in the mode which calculates
+                        turnover rates using the two point method. If desired, use the ‘Exponential Fit’ checkbox to
+                        switch to calculating turnover rates using an exponential fit. When calculating using an
+                        exponential
+                        fit, add more data rows using the ‘Add samples’ button. The checkboxes to the left of the sample
+                        rows indicate whether the sample will be used in the exponential fit. Note that when using
+                        the exponential fit the 2H plateau, 18O plateau, and EE Error Flags can produce strange results
+                        if the first two non-background samples are not two closely-spaced post-dose samples and/or the
+                        last two samples are not closely-spaced end-dose samples.</p>
                     <p className='help-paragraph'>Mixed Dose: If checked, enter 18O and 2H enrichments of the dose as
                         measured <strong>after</strong> mixing.</p>
+                    <p className='help-paragraph'>RQ: If left blank, the RQ value used is 0.85.</p>
+                    <p className='help-paragraph'>Population Dilution Space Ratio: If left blank, the population
+                        dilution
+                        space ratio value used is 1.036, as suggested in Speakman (2020).</p>
+                    <p className='help-paragraph'>Help us improve the DLW program: please report any issues or
+                        feature requests at <a href="https://github.com/jchmyz/DoublyLabeledWater/issues">our open
+                            source
+                            repository</a>.</p>
                 </Dialog>
                 <NavbarGroup align={Alignment.LEFT}>
                     <Navbar.Heading className='dlw-title'>Doubly Labeled Water</Navbar.Heading>
@@ -504,7 +532,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <a href="https://github.com/jchmyz/DoublyLabeledWater" target="_blank">DoublyLabeledWater on
                         GitHub</a>
                     <NavbarDivider/>
-                    <Button icon={"help"} minimal={true}
+                    <Button icon={"help"} minimal={true} className='help-button'
                             onClick={() => this.setState({info_overlay_open: true})}>Help</Button>
                 </NavbarGroup>
                 <FormGroup className='dlw-app'>
@@ -585,8 +613,6 @@ export class DLWApp extends React.Component<any, DLWState> {
                                               this.setState({mixed_dose: !this.state.mixed_dose})
                                           }} alignIndicator={Alignment.RIGHT}/>
                             </div>
-                            <Button icon="help" minimal={true} className='mixed-dose-help-button'
-                                    onClick={() => this.setState({info_overlay_open: true})}/>
                         </div>
                     </div>
                     <div className='element-wise-inputs'>
@@ -597,6 +623,11 @@ export class DLWApp extends React.Component<any, DLWState> {
                         <div className='inputs-by-element'>
                             <h5>{((this.state.mixed_dose) ? 'Mixed Dose Enrichments' : 'Dose Enrichments')}</h5>
                             {dose_enrichment_inputs}
+                        </div>
+                        <div className='inputs-by-element'>
+                            <h5>RQ</h5>
+                            <NumberInput placeholder={"RQ"} value={this.state.rq}
+                                         change_function={this.handle_rq_change} unit={''} index={0}/>
                         </div>
                     </div>
                     <div className='element-wise-inputs'>
@@ -702,7 +733,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                 mixed_dose: this.state.mixed_dose,
                 in_permil: (this.state.delta_units === DeltaUnits.permil),
                 pop_avg_rdil: this.state.dilution_space_ratio ? this.state.dilution_space_ratio : null,
-                exponential: this.state.exponential
+                exponential: this.state.exponential,
+                rq: this.state.rq
             }
         );
         if (calculated_results.results) {
@@ -710,17 +742,9 @@ export class DLWApp extends React.Component<any, DLWState> {
                               results: {
                                   results: {
                                       calculations: calculated_results.results.calculations,
-                                      schoeller: {
-                                          rco2_ee_int: calculated_results.results.schoeller.rco2_ee_int,
-                                          rco2_ee_plat: calculated_results.results.schoeller.rco2_ee_plat,
-                                      },
-                                      racette: {
-                                          rco2_ee_int: calculated_results.results.racette.rco2_ee_int,
-                                          rco2_ee_plat: calculated_results.results.racette.rco2_ee_plat
-                                      },
-                                      speakman: {
-                                          rco2_ee_int: calculated_results.results.speakman.rco2_ee_int,
-                                          rco2_ee_plat: calculated_results.results.speakman.rco2_ee_plat
+                                      speakman2020: {
+                                          rco2_ee_int: calculated_results.results.speakman2020.rco2_ee_int,
+                                          rco2_ee_plat: calculated_results.results.speakman2020.rco2_ee_plat
                                       },
                                       error_flags: calculated_results.results.error_flags
                                   }
@@ -736,6 +760,9 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     clear = () => {
+        if (!this.state.exponential) {
+            this.setState({num_deltas: NUM_DELTAS, num_sample_times: NUM_SAMPLE_TIMES});
+        }
         this.setState({
                           clear_popup_open: false,
 
@@ -743,6 +770,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                           deuterium_deltas: new Array(this.state.num_deltas).fill(""),
                           oxygen_deltas: new Array(this.state.num_deltas).fill(""),
                           datetimes: new Array(this.state.num_sample_times).fill(this.now),
+                          excluded_samples: new Array(this.state.num_sample_times).fill(false),
                           dose_weights: ["", ""],
                           dose_enrichments: ["", ""],
                           subject_weights: ["", ""],
@@ -780,8 +808,10 @@ export class DLWApp extends React.Component<any, DLWState> {
                 try {
                     let d_meas = r.d_meas.split(";");
                     let o_meas = r.o_meas.split(";");
-                    if (d_meas.length > NUM_DELTAS) {
-                        this.add_sample_rows(d_meas.length - NUM_DELTAS);
+                    if (d_meas.length > this.state.num_deltas) {
+                        this.add_sample_rows(d_meas.length - this.state.num_deltas);
+                    } else if (!r.exponential_fit || r.exponential_fit == "false") {
+                        this.reset_sample_rows();
                     }
                     for (let i = 0; i < d_meas.length; i++) {
                         this.handle_deuterium_delta_change(i, d_meas[i]);
@@ -1103,6 +1133,11 @@ export class DLWApp extends React.Component<any, DLWState> {
         this.setState({dilution_space_ratio: value});
     };
 
+    handle_rq_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
+        this.setState({rq: value});
+    };
+
     add_sample_rows = (rows_to_add: number) => {
         let deuterium_deltas = this.state.deuterium_deltas;
         let oxygen_deltas = this.state.oxygen_deltas;
@@ -1121,4 +1156,14 @@ export class DLWApp extends React.Component<any, DLWState> {
                           excluded_samples: excluded_samples
                       });
     };
+
+    reset_sample_rows = () => {
+        this.setState({
+                          deuterium_deltas: new Array(NUM_DELTAS).fill(""),
+                          oxygen_deltas: new Array(NUM_DELTAS).fill(""),
+                          datetimes: new Array(NUM_SAMPLE_TIMES).fill(this.now),
+                          excluded_samples: new Array(NUM_DELTAS).fill(false),
+                          num_deltas: NUM_DELTAS, num_sample_times: NUM_SAMPLE_TIMES
+                      });
+    }
 }

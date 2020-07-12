@@ -715,13 +715,13 @@ class DLWSubject:
             the PD5/ED5 pair
             :return: percentage differences
         """
-        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[4] - self.sample_datetimes[2])) / 3600
-        kd_a = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[1], self.d_ratios[3], elapsedhours)
-        ko_a = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[1], self.o18_ratios[3], elapsedhours)
+        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[-2] - self.sample_datetimes[2])) / 3600
+        kd_a = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[1], self.d_ratios[-2], elapsedhours)
+        ko_a = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[1], self.o18_ratios[-2], elapsedhours)
 
-        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[5] - self.sample_datetimes[3])) / 3600
-        kd_b = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[4], elapsedhours)
-        ko_b = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[4], elapsedhours)
+        elapsedhours = (timedelta.total_seconds(self.sample_datetimes[-1] - self.sample_datetimes[3])) / 3600
+        kd_b = self.isotope_turnover_2pt(self.d_ratios[0], self.d_ratios[2], self.d_ratios[-1], elapsedhours)
+        ko_b = self.isotope_turnover_2pt(self.o18_ratios[0], self.o18_ratios[2], self.o18_ratios[-1], elapsedhours)
 
         #ave_weight = (self.subject_weights[0] + self.subject_weights[1]) / 2
         # if ave_weight < WEIGHT_CUTOFF:
