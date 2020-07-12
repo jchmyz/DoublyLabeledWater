@@ -330,13 +330,15 @@ export class DLWApp extends React.Component<any, DLWState> {
 
             let error_okay = "error-okay";
             let outside_error_bars = "error-not-okay";
-            let error_class = ((parseFloat(this.state.results.results.error_flags.plateau_2h[1]) < 0.05) ? error_okay : outside_error_bars);
+            let error_class = ((parseFloat(this.state.results.results.error_flags.plateau_2h[1]) < 5 &&
+                parseFloat(this.state.results.results.error_flags.plateau_2h[1]) > -5) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.plateau_2h[0] + ":"}</p>
                     <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_2h[1]}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_18O[1]) < 0.05) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_18O[1]) < 5 &&
+                parseFloat(this.state.results.results.error_flags.plateau_18O[1]) > -5) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.plateau_18O[0] + ":"}</p>
@@ -349,7 +351,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <p className="result-label">{this.state.results.results.error_flags.ds_ratio[0] + ":"}</p>
                     <p className={"result-value " + error_class}>{this.state.results.results.error_flags.ds_ratio[1]}</p>
                 </div>);
-            error_class = ((parseFloat(this.state.results.results.error_flags.ee[1]) < 10) ? error_okay : outside_error_bars);
+            error_class = ((parseFloat(this.state.results.results.error_flags.ee[1]) < 10 &&
+                parseFloat(this.state.results.results.error_flags.ee[1]) > -10) ? error_okay : outside_error_bars);
             results_error_flags.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.error_flags.ee[0] + ":"}</p>
@@ -370,22 +373,21 @@ export class DLWApp extends React.Component<any, DLWState> {
                 delta_units = '‰';
             }
             if (!this.state.exponential) {
-                let x_counter_d = 0;
-                let x_counter_o = 0;
-                for (let i = 0; i < this.state.deuterium_deltas.length; i++) {
+                let x_counter = 0;
+                let i = 0;
+                while (x_counter < NUM_DELTAS) {
+                    // assume that we include the same samples for deuterium and o18
                     if (this.state.deuterium_deltas[i] != "" && !this.state.excluded_samples[i]) {
-                        chart_data_d_meas.push({x: x_counter_d, y: this.state.deuterium_deltas[i]});
-                        x_counter_d++;
+                        chart_data_d_meas.push({x: x_counter, y: this.state.deuterium_deltas[i]});
+                        chart_data_o18_meas.push({x: x_counter, y: this.state.oxygen_deltas[i]});
+                        x_counter++;
                     }
-                    if (this.state.oxygen_deltas[i] != "" && !this.state.excluded_samples[i]) {
-                        chart_data_o18_meas.push({x: x_counter_o, y: this.state.oxygen_deltas[i]});
-                        x_counter_o++;
-                    }
+                    i++;
                 }
                 deltas_chart = (
                     <DeltaScatterChart delta_units={delta_units} x_labels={SAMPLE_LABELS}
-                                       x_domain={[-0.5, this.state.deuterium_deltas.length - .5]}
-                                       x_ticks={Array.from(Array(this.state.deuterium_deltas.length).keys())}
+                                       x_domain={[-0.5, NUM_DELTAS - .5]}
+                                       x_ticks={Array.from(Array(NUM_DELTAS).keys())}
                                        chart_data_d_meas={chart_data_d_meas} chart_data_o18_meas={chart_data_o18_meas}/>
                 );
             } else {
@@ -480,31 +482,44 @@ export class DLWApp extends React.Component<any, DLWState> {
                             this.setState({info_overlay_open: false})
                         }}
                         title={'How to use the Doubly Labeled Water App'}>
-                    <p className='help-paragraph'>Enter inputs manually, or upload subject inputs from a custom CSV file.
+                    <p className='help-paragraph'>Enter inputs manually, or upload subject inputs from a custom CSV
+                        file.
                         For the CSV format that the program expects, see
-                        <a href="https://github.com/jchmyz/DoublyLabeledWater#example-input-csvs"> the GitHub repo</a>.</p>
+                        <a href="https://github.com/jchmyz/DoublyLabeledWater#example-input-csvs"> the GitHub repo</a>.
+                    </p>
                     <p className='help-paragraph'>When entering inputs manually, multiple inputs can be copied and
                         pasted simultaneously into the program. For example, select and copy multiple cells containing
                         deuterium delta values from a spreadsheet, place your cursor into the input box for the first
                         value you are copying, and paste. </p>
                     <p className='help-paragraph'>Once you have entered all of the required input values, the 'Calculate
-                        Results' button will be active. Press 'Calculate Results' to calculate error flags and results using the
-                        Speakman (2020) equation, and view a graph showing the measured enrichments. If you change an input,
-                        recalculate using 'Calculate Results'. Once the results appear appropriate based on the display, you
-                    can save your results to a CSV file using 'Export Results to CSV'. The program provides a default CSV
-                    filename based on the subject ID and date, or you can customize the filename yourself.</p>
-                    <p className='help-paragraph'>Exponential Fitting: Use the 'Exponential Fit' checkbox to switch to
-                    calculating an exponential fit. When calculating an exponential fit, add more data rows using the 'Add
-                    samples' button. The checkboxes to the left of the sample rows indicate whether the sample will be used
-                    in the exponential fit.</p>
+                        Results' button will be active. Press 'Calculate Results' to calculate error flags and results
+                        using the
+                        Speakman (2020) equation, and view a graph showing the measured enrichments. If you change an
+                        input,
+                        recalculate using 'Calculate Results'. Once the results appear appropriate based on the display,
+                        you
+                        can save your results to a CSV file using 'Export Results to CSV'. The program provides a
+                        default CSV
+                        filename based on the subject ID and date, or you can customize the filename yourself.</p>
+                    <p className='help-paragraph'>Exponential Fitting: The program loads in the mode which calculates
+                        turnover rates using the two point method. If desired, use the ‘Exponential Fit’ checkbox to
+                        switch to calculating turnover rates using an exponential fit. When calculating using an
+                        exponential
+                        fit, add more data rows using the ‘Add samples’ button. The checkboxes to the left of the sample
+                        rows indicate whether the sample will be used in the exponential fit. Note that when using
+                        the exponential fit the 2H plateau, 18O plateau, and EE Error Flags can produce strange results
+                        if the first two non-background samples are not two closely-spaced post-dose samples and/or the
+                        last two samples are not closely-spaced end-dose samples.</p>
                     <p className='help-paragraph'>Mixed Dose: If checked, enter 18O and 2H enrichments of the dose as
                         measured <strong>after</strong> mixing.</p>
                     <p className='help-paragraph'>RQ: If left blank, the RQ value used is 0.85.</p>
-                    <p className='help-paragraph'>Population Dilution Space Ratio: If left blank, the
-                        population dilution space ratio value used is 1.036.</p>
+                    <p className='help-paragraph'>Population Dilution Space Ratio: If left blank, the population
+                        dilution
+                        space ratio value used is 1.036, as suggested in Speakman (2020).</p>
                     <p className='help-paragraph'>Help us improve the DLW program: please report any issues or
-                        feature requests at <a href="https://github.com/jchmyz/DoublyLabeledWater/issues">our open source
-                    repository</a>.</p>
+                        feature requests at <a href="https://github.com/jchmyz/DoublyLabeledWater/issues">our open
+                            source
+                            repository</a>.</p>
                 </Dialog>
                 <NavbarGroup align={Alignment.LEFT}>
                     <Navbar.Heading className='dlw-title'>Doubly Labeled Water</Navbar.Heading>
@@ -517,7 +532,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <a href="https://github.com/jchmyz/DoublyLabeledWater" target="_blank">DoublyLabeledWater on
                         GitHub</a>
                     <NavbarDivider/>
-                    <Button icon={"help"} minimal={true}
+                    <Button icon={"help"} minimal={true} className='help-button'
                             onClick={() => this.setState({info_overlay_open: true})}>Help</Button>
                 </NavbarGroup>
                 <FormGroup className='dlw-app'>
@@ -598,8 +613,6 @@ export class DLWApp extends React.Component<any, DLWState> {
                                               this.setState({mixed_dose: !this.state.mixed_dose})
                                           }} alignIndicator={Alignment.RIGHT}/>
                             </div>
-                            <Button icon="help" minimal={true} className='mixed-dose-help-button'
-                                    onClick={() => this.setState({info_overlay_open: true})}/>
                         </div>
                     </div>
                     <div className='element-wise-inputs'>
@@ -747,6 +760,9 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     clear = () => {
+        if (!this.state.exponential) {
+            this.setState({num_deltas: NUM_DELTAS, num_sample_times: NUM_SAMPLE_TIMES});
+        }
         this.setState({
                           clear_popup_open: false,
 
@@ -754,6 +770,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                           deuterium_deltas: new Array(this.state.num_deltas).fill(""),
                           oxygen_deltas: new Array(this.state.num_deltas).fill(""),
                           datetimes: new Array(this.state.num_sample_times).fill(this.now),
+                          excluded_samples: new Array(this.state.num_sample_times).fill(false),
                           dose_weights: ["", ""],
                           dose_enrichments: ["", ""],
                           subject_weights: ["", ""],
@@ -791,8 +808,10 @@ export class DLWApp extends React.Component<any, DLWState> {
                 try {
                     let d_meas = r.d_meas.split(";");
                     let o_meas = r.o_meas.split(";");
-                    if (d_meas.length > NUM_DELTAS) {
-                        this.add_sample_rows(d_meas.length - NUM_DELTAS);
+                    if (d_meas.length > this.state.num_deltas) {
+                        this.add_sample_rows(d_meas.length - this.state.num_deltas);
+                    } else if (!r.exponential_fit || r.exponential_fit == "false") {
+                        this.reset_sample_rows();
                     }
                     for (let i = 0; i < d_meas.length; i++) {
                         this.handle_deuterium_delta_change(i, d_meas[i]);
@@ -1137,4 +1156,14 @@ export class DLWApp extends React.Component<any, DLWState> {
                           excluded_samples: excluded_samples
                       });
     };
+
+    reset_sample_rows = () => {
+        this.setState({
+                          deuterium_deltas: new Array(NUM_DELTAS).fill(""),
+                          oxygen_deltas: new Array(NUM_DELTAS).fill(""),
+                          datetimes: new Array(NUM_SAMPLE_TIMES).fill(this.now),
+                          excluded_samples: new Array(NUM_DELTAS).fill(false),
+                          num_deltas: NUM_DELTAS, num_sample_times: NUM_SAMPLE_TIMES
+                      });
+    }
 }
