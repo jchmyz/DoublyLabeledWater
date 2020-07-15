@@ -921,7 +921,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         let values_sep_by_spaces = value.split(" ");
         values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
         if (values_sep_by_spaces.length === 1 || value === "") {
-            if (!isNaN(+value) || value === "") {
+            if (!isNaN(+value) || value === "" || value === "-") {
                 let new_deltas = this.state.deuterium_deltas;
                 new_deltas.splice(index, 1, value);
                 this.setState({
@@ -942,7 +942,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         let values_sep_by_spaces = value.split(" ");
         values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
         if (values_sep_by_spaces.length === 1 || value === "") {
-            if (!isNaN(+value) || (value === "")) {
+            if (!isNaN(+value) || value === "" || value === "-") {
                 let new_deltas = this.state.oxygen_deltas;
                 new_deltas.splice(index, 1, value);
                 this.setState({
@@ -1063,7 +1063,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         let values_sep_by_spaces = value.split(" ");
         values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
         if (values_sep_by_spaces.length === 1 || value === "") {
-            if (!isNaN(+value) || value === "") {
+            if (!isNaN(+value) || value === "" || value === "-") {
                 let new_dose_weights = this.state.dose_weights;
                 new_dose_weights.splice(index, 1, value);
                 this.setState({
@@ -1083,7 +1083,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         let values_sep_by_spaces = value.split(" ");
         values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
         if (values_sep_by_spaces.length === 1 || value === "") {
-            if (!isNaN(+value) || value === "") {
+            if (!isNaN(+value) || value === "" || value === "-") {
                 let new_enrichments = this.state.dose_enrichments;
                 new_enrichments.splice(index, 1, value);
                 this.setState({
