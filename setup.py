@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
         name='dlw',
-        version='0.0.10',
+        version='0.0.11',
         author='Julia Chmyz',
         author_email='julia@chmyz.com',
         packages=setuptools.find_packages(),
