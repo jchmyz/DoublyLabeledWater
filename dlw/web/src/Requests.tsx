@@ -7,7 +7,7 @@ interface CSVResults {
 }
 
 export interface LoadedCSVResults extends CSVResults {
-    results: LoadedCSVInputs | null
+    results: LoadedCSVInputs[] | null
 }
 
 export async function calculate_from_inputs(inputs: CalculationInputs): Promise<Results> {

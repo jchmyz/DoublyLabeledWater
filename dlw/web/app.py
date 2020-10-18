@@ -106,10 +106,10 @@ def load_csv():
     file = request.get_data().decode('utf-8')
     rows = file.split('\n')
     reader = csv.DictReader(rows)
+    results = []
     for row in reader:
-        # there should only be one, TODO batched processing
-        return json.dumps({'results': row, 'error': False})
-
+        results.append(row)
+    return json.dumps({'results': results, 'error': False})
 
 @app.route('/')
 def root():

@@ -11,7 +11,7 @@ import {Card, Navbar, NavbarDivider, NavbarGroup, NavbarHeading} from "@blueprin
 import {NumberInput} from "./NumberInput";
 import {convert_string_to_moment, check_array_for_missing_values, pad} from "./utilities";
 import {DeltaScatterChart, ExponentialDeltaScatterChart} from "./DeltaScatterChart";
-import {DeltaUnits} from "./types/CalculationInputs";
+import {DeltaUnits, LoadedCSVInputs} from "./types/CalculationInputs";
 
 const DEUTERIUM = "Deuterium";
 const OXYGEN = "Oxygen 18";
@@ -61,6 +61,8 @@ export interface Results {
 
 interface DLWState {
     input_csv_name: string;
+    loaded_csv_inputs: LoadedCSVInputs[];
+    loaded_csv_index: number;
     info_overlay_open: boolean;
     clear_popup_open: boolean;
     missing_data_popup_open: boolean;
@@ -108,6 +110,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         this.scroll_anchor_ref = React.createRef();
         this.state = {
             input_csv_name: "", info_overlay_open: false, clear_popup_open: false, missing_data_popup_open: false,
+            loaded_csv_inputs: [], loaded_csv_index: 0,
 
             delta_units: DeltaUnits.permil,
             exponential: false, num_deltas: NUM_DELTAS, num_sample_times: NUM_SAMPLE_TIMES,
@@ -146,6 +149,11 @@ export class DLWApp extends React.Component<any, DLWState> {
         let collection_time_inputs: JSX.Element[] = [];
         let include_checkboxes: JSX.Element[] = [];
         let add_rows_button = <div/>;
+        let load_next_csv_row_button = <div/>;
+
+        if (this.state.loaded_csv_inputs.length > 1 && this.state.loaded_csv_index < this.state.loaded_csv_inputs.length - 1) {
+            load_next_csv_row_button = <Button className='load-new-csv-row-button' onClick={this.load_next_csv_row}>LOAD NEXT ROW</Button>;
+        }
         if (!this.state.exponential) {
             let d_deltas = this.state.deuterium_deltas.slice(0, NUM_DELTAS - 2).concat(this.state.deuterium_deltas.slice(-2));
             let o_deltas = this.state.oxygen_deltas.slice(0, NUM_DELTAS - 2).concat(this.state.oxygen_deltas.slice(-2));
@@ -562,12 +570,17 @@ export class DLWApp extends React.Component<any, DLWState> {
                         </div>
                     </div>
                     <div className='load-from-csv'>
-                        <h5>Load input data from .csv file</h5>
-                        <FileInput text={this.state.input_csv_name || "Choose file..."}
-                                   inputProps={{
-                                       'accept': '.csv',
-                                       'id': 'file-input'
-                                   }} onInputChange={this.handle_csv_upload}/>
+                        <div>
+                            <h5>Load input data from .csv file</h5>
+                            <FileInput text={this.state.input_csv_name || "Choose file..."}
+                                       inputProps={{
+                                           'accept': '.csv',
+                                           'id': 'file-input'
+                                       }} onInputChange={this.handle_csv_upload}/>
+                        </div>
+                        <div className='load-next-csv-button-div'>
+                            {load_next_csv_row_button}
+                        </div>
                     </div>
                     <div className='exponential-checkbox'>
                         <Checkbox checked={this.state.exponential} labelElement={<h5>Exponential
@@ -766,7 +779,6 @@ export class DLWApp extends React.Component<any, DLWState> {
         this.setState({
                           clear_popup_open: false,
 
-                          input_csv_name: "",
                           deuterium_deltas: new Array(this.state.num_deltas).fill(""),
                           oxygen_deltas: new Array(this.state.num_deltas).fill(""),
                           datetimes: new Array(this.state.num_sample_times).fill(this.now),
@@ -790,6 +802,13 @@ export class DLWApp extends React.Component<any, DLWState> {
         document.getElementById('file-input').value = null;
     };
 
+    load_next_csv_row = async () => {
+        let next_index = this.state.loaded_csv_index + 1;
+        this.setState({loaded_csv_index: next_index});
+        this.clear();
+        await this._handle_csv_input(this.state.loaded_csv_inputs[next_index]);
+    };
+
     handle_csv_upload = async (event: FormEvent<HTMLInputElement>) => {
         let file = (event.target as any).files[0];
         if ((file.type === "text/csv" || file.type === "application/vnd.ms-excel") || (file.type === "" && file.name.endsWith(".csv"))) {
@@ -802,75 +821,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                                 });
             } else {
                 this.clear();
-                this.setState({input_csv_name: file.name});
-                let r = inputs.results;
-                let hit_error = false;
-                try {
-                    let d_meas = r.d_meas.split(";");
-                    let o_meas = r.o_meas.split(";");
-                    if (d_meas.length > this.state.num_deltas) {
-                        this.add_sample_rows(d_meas.length - this.state.num_deltas);
-                    } else if (!r.exponential_fit || r.exponential_fit == "false") {
-                        this.reset_sample_rows();
-                    }
-                    for (let i = 0; i < d_meas.length; i++) {
-                        this.handle_deuterium_delta_change(i, d_meas[i]);
-                        this.handle_oxygen_delta_change(i, o_meas[i]);
-                    }
-                } catch (e) {
-                    hit_error = true;
-                }
-                try {
-                    let dates = r.sample_times.split(";");
-                    for (let i = 0; i < dates.length; i++) {
-                        this.handle_date_change(i, dates[i]);
-                    }
-                } catch (e) {
-                    hit_error = true;
-                }
-                try {
-                    if (r.dose_weight) {
-                        this.setState({mixed_dose: true});
-                        this.handle_dose_weight_change(0, r.dose_weight);
-                    } else if (r.dose_weight_d && r.dose_weight_o) {
-                        this.handle_dose_weight_change(0, r.dose_weight_d);
-                        this.handle_dose_weight_change(1, r.dose_weight_o);
-                    }
-                } catch (e) {
-                    hit_error = true;
-                }
-                try {
-                    this.handle_dose_enrichment_change(0, r.dose_enrichment_d);
-                    this.handle_dose_enrichment_change(1, r.dose_enrichment_o);
-                    this.handle_subject_weight_change(0, r.subject_weight_initial);
-                    this.handle_subject_weight_change(1, r.subject_weight_final);
-                    this.handle_dilution_space_ratio_change(0, r.pop_dilution_space_ratio);
-                    this.handle_subject_id_change(r.subject_id);
-                    if (r.delta_units) {
-                        this.setState({delta_units: r.delta_units});
-                    }
-                    if (r.exponential_fit) {
-                        this.setState({exponential: JSON.parse(r.exponential_fit)});
-                    }
-                } catch (e) {
-                    hit_error = true;
-                }
-                if (hit_error) {
-                    AppToaster.show({
-                                        message:
-                                            "One or more values not inputted automatically. Add manually, or fix CSV format." +
-                                            " For formatting help, press 'Help' in the upper right hand corner",
-                                        intent: "danger",
-                                        timeout: 0
-                                    });
-                } else {
-                    AppToaster.show({
-                                        message:
-                                            "Inputs successfully loaded from ".concat(this.state.input_csv_name),
-                                        intent: "primary",
-                                        timeout: 3000
-                                    });
-                }
+                this.setState({input_csv_name: file.name, loaded_csv_inputs: inputs.results, loaded_csv_index: 0});
+                await this._handle_csv_input(inputs.results[0]);
             }
         } else {
             AppToaster.show({
@@ -879,6 +831,83 @@ export class DLWApp extends React.Component<any, DLWState> {
                                 timeout: 0
                             });
         }
+    };
+
+    _handle_csv_input = async (input: LoadedCSVInputs) => {
+        await new Promise(r => setTimeout(r, 200));
+        let hit_error = false;
+        try {
+            let d_meas = input.d_meas.split(";");
+            let o_meas = input.o_meas.split(";");
+            if (d_meas.length > this.state.num_deltas) {
+                this.add_sample_rows(d_meas.length - this.state.num_deltas);
+            } else if (!input.exponential_fit || input.exponential_fit == "false") {
+                this.reset_sample_rows();
+            }
+            for (let i = 0; i < d_meas.length; i++) {
+                this.handle_deuterium_delta_change(i, d_meas[i]);
+                this.handle_oxygen_delta_change(i, o_meas[i]);
+            }
+        } catch (e) {
+            hit_error = true;
+        }
+        try {
+            let dates = input.sample_times.split(";");
+            for (let i = 0; i < dates.length; i++) {
+                this.handle_date_change(i, dates[i]);
+            }
+        } catch (e) {
+            hit_error = true;
+        }
+        try {
+            if (input.dose_weight) {
+                this.setState({mixed_dose: true});
+                this.handle_dose_weight_change(0, input.dose_weight);
+            } else if (input.dose_weight_d && input.dose_weight_o) {
+                this.handle_dose_weight_change(0, input.dose_weight_d);
+                this.handle_dose_weight_change(1, input.dose_weight_o);
+            }
+        } catch (e) {
+            hit_error = true;
+        }
+        try {
+            this.handle_dose_enrichment_change(0, input.dose_enrichment_d);
+            this.handle_dose_enrichment_change(1, input.dose_enrichment_o);
+            this.handle_subject_weight_change(0, input.subject_weight_initial);
+            this.handle_subject_weight_change(1, input.subject_weight_final);
+            this.handle_dilution_space_ratio_change(0, input.pop_dilution_space_ratio);
+            this.handle_subject_id_change(input.subject_id);
+            if (input.delta_units) {
+                this.setState({delta_units: input.delta_units});
+            }
+            if (input.exponential_fit) {
+                this.setState({exponential: JSON.parse(input.exponential_fit)});
+            }
+        } catch (e) {
+            console.log(e);
+            hit_error = true;
+        }
+        if (hit_error) {
+            AppToaster.show({
+                                message:
+                                    "One or more values not inputted automatically. Add manually, or fix CSV format." +
+                                    " For formatting help, press 'Help' in the upper right hand corner",
+                                intent: "danger",
+                                timeout: 0
+                            });
+        } else {
+            let addl_msg = ''
+            if (this.state.loaded_csv_inputs.length > 1) {
+                addl_msg = '\nRow ' + (this.state.loaded_csv_index + 1) + ' of ' + this.state.loaded_csv_inputs.length + ' input rows loaded'
+            }
+            AppToaster.show({
+                                message:
+                                    "Inputs for subject ID " + input.subject_id + " successfully loaded from " + this.state.input_csv_name + addl_msg,
+                                intent: "primary",
+                                timeout: 4000
+                            });
+        }
+
     };
 
     _bad_format = (specific_error: string) => {
