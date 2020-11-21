@@ -150,9 +150,16 @@ export class DLWApp extends React.Component<any, DLWState> {
         let include_checkboxes: JSX.Element[] = [];
         let add_rows_button = <div/>;
         let load_next_csv_row_button = <div/>;
+        let load_prev_csv_row_button = <div/>;
 
-        if (this.state.loaded_csv_inputs.length > 1 && this.state.loaded_csv_index < this.state.loaded_csv_inputs.length - 1) {
-            load_next_csv_row_button = <Button className='load-new-csv-row-button' onClick={this.load_next_csv_row}>LOAD NEXT ROW</Button>;
+        if (this.state.loaded_csv_inputs.length > 1) {
+            load_next_csv_row_button = <Button className='load-new-csv-row-button' onClick={this.load_next_csv_row}
+                                               disabled={this.state.loaded_csv_index == this.state.loaded_csv_inputs.length - 1}>LOAD
+                NEXT ROW</Button>;
+        }
+        if (this.state.loaded_csv_inputs.length > 1) {
+            load_prev_csv_row_button = <Button className='load-new-csv-row-button' onClick={this.load_previous_csv_row}
+                                               disabled={this.state.loaded_csv_index == 0}>LOAD PREVIOUS ROW</Button>;
         }
         if (!this.state.exponential) {
             let d_deltas = this.state.deuterium_deltas.slice(0, NUM_DELTAS - 2).concat(this.state.deuterium_deltas.slice(-2));
@@ -212,9 +219,10 @@ export class DLWApp extends React.Component<any, DLWState> {
             }
             for (let i = 1; i < this.state.num_deltas; i++) {
                 include_checkboxes.push(
-                    <Tooltip content='Include in expontial fit' hoverOpenDelay={700}>
+                    <Tooltip content='Include in exponential fit' hoverOpenDelay={700}>
                         <Checkbox checked={!this.state.excluded_samples[i]}
                                   onChange={() => {
+                                      this.clear_results();
                                       let excluded_samples = this.state.excluded_samples;
                                       excluded_samples.splice(i, 1, !this.state.excluded_samples[i]);
                                       this.setState({excluded_samples: excluded_samples})
@@ -375,6 +383,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                 </div>);
             let chart_data_d_meas = [];
             let chart_data_o18_meas = [];
+            let chart_data_dates: moment.Moment[] = [];
             let deltas_chart;
             let delta_units = this.state.delta_units.toString();
             if (delta_units == 'permil') {
@@ -399,23 +408,27 @@ export class DLWApp extends React.Component<any, DLWState> {
                                        chart_data_d_meas={chart_data_d_meas} chart_data_o18_meas={chart_data_o18_meas}/>
                 );
             } else {
-                let max_date_iso = 0;
                 // first, middle and last dates, approx
-                let labels = [this.state.datetimes[0].format('YYYY-MM-DD')];
-                labels.push(this.state.datetimes[this.state.datetimes.length / 2].format('YYYY-MM-DD'));
-                labels.push(this.state.datetimes[this.state.datetimes.length - 1].format('YYYY-MM-DD'));
+                for (let i = 0; i < this.state.num_sample_times; i++) {
+                    if (!this.state.excluded_samples[i]) {
+                        chart_data_dates.push(this.state.datetimes[i]);
+                    }
+                }
+                let labels = [chart_data_dates[0].format('YYYY-MM-DD')];
+                labels.push(chart_data_dates[~~(chart_data_dates.length / 2)].format('YYYY-MM-DD'));
+                labels.push(chart_data_dates[chart_data_dates.length - 1].format('YYYY-MM-DD'));
 
-                let ticks = [this.state.datetimes[0].unix()];
-                ticks.push(this.state.datetimes[this.state.datetimes.length / 2].unix());
-                ticks.push(this.state.datetimes[this.state.datetimes.length - 1].unix());
+                let ticks = [chart_data_dates[0].unix()];
+                ticks.push(chart_data_dates[~~(chart_data_dates.length / 2)].unix());
+                ticks.push(chart_data_dates[chart_data_dates.length - 1].unix());
 
                 // background data
                 chart_data_d_meas.push({
-                                           x: this.state.datetimes[0].unix(),
+                                           x: chart_data_dates[0].unix(),
                                            y: this.state.deuterium_deltas[0]
                                        });
                 chart_data_o18_meas.push({
-                                             x: this.state.datetimes[0].unix(),
+                                             x: chart_data_dates[0].unix(),
                                              y: this.state.oxygen_deltas[0]
                                          });
 
@@ -425,7 +438,6 @@ export class DLWApp extends React.Component<any, DLWState> {
                                                    x: this.state.datetimes[i + 1].unix(),
                                                    y: this.state.deuterium_deltas[i]
                                                });
-                        max_date_iso = this.state.datetimes[i].unix();
                     }
                     if (this.state.oxygen_deltas[i] != "" && !this.state.excluded_samples[i]) {
                         chart_data_o18_meas.push({
@@ -436,7 +448,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                 }
                 deltas_chart = (
                     <ExponentialDeltaScatterChart delta_units={delta_units} x_ticks={ticks} x_labels={labels}
-                                                  x_domain={[this.state.datetimes[0].unix() - 10000, max_date_iso + 10000]}
+                                                  x_domain={[chart_data_dates[0].unix() - 10000, chart_data_dates[chart_data_dates.length - 1].unix() + 10000]}
                                                   chart_data_d_meas={chart_data_d_meas}
                                                   chart_data_o18_meas={chart_data_o18_meas}/>
                 );
@@ -580,6 +592,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                         </div>
                         <div className='load-next-csv-button-div'>
                             {load_next_csv_row_button}
+                            {load_prev_csv_row_button}
                         </div>
                     </div>
                     <div className='exponential-checkbox'>
@@ -588,6 +601,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                             if (this.state.num_deltas < DEFAULT_EXPONENTIAL_SAMPLES) {
                                 this.add_sample_rows(6);
                             }
+                            this.clear_results();
                             this.setState({exponential: !this.state.exponential})
                         }} alignIndicator={Alignment.RIGHT} large={true}/>
                     </div>
@@ -609,6 +623,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                         </div>
                         <div className='delta-unit-radio'>
                             <RadioGroup onChange={(event: FormEvent<HTMLInputElement>) => {
+                                this.clear_results();
                                 this.setState({delta_units: (event.target as any).value})
                             }} selectedValue={this.state.delta_units}>
                                 <Radio label="permil" value={DeltaUnits.permil} large={true}/>
@@ -623,6 +638,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                                 <Checkbox checked={this.state.mixed_dose} labelElement={<h5>Mixed
                                     Dose</h5>} large={true}
                                           onChange={() => {
+                                              this.clear_results();
                                               this.setState({mixed_dose: !this.state.mixed_dose})
                                           }} alignIndicator={Alignment.RIGHT}/>
                             </div>
@@ -802,11 +818,43 @@ export class DLWApp extends React.Component<any, DLWState> {
         document.getElementById('file-input').value = null;
     };
 
+    clear_results = () => {
+        if (this.state.results.results) {
+            AppToaster.show({
+                                message: "Inputs edited; results cleared.",
+                                intent: "primary",
+                                timeout: 2000
+                            });
+            this.setState({results: {results: null}});
+        }
+    };
+
     load_next_csv_row = async () => {
         let next_index = this.state.loaded_csv_index + 1;
         this.setState({loaded_csv_index: next_index});
         this.clear();
         await this._handle_csv_input(this.state.loaded_csv_inputs[next_index]);
+    };
+
+    load_previous_csv_row = async () => {
+        let prev_index = this.state.loaded_csv_index - 1;
+        this.setState({loaded_csv_index: prev_index});
+        this.clear();
+        await this._handle_csv_input(this.state.loaded_csv_inputs[prev_index]);
+    };
+
+    load_specified_csv_row = async (index: number) => {
+        if (index < 0 || index > this.state.loaded_csv_inputs.length - 1) {
+            AppToaster.show({
+                                message: "Invalid CSV row entered, not loading new input row. Enter a value between 1 and " + this.state.loaded_csv_inputs.length,
+                                intent: "danger",
+                                timeout: 0
+                            });
+        } else {
+            this.setState({loaded_csv_index: index});
+            this.clear();
+            await this._handle_csv_input(this.state.loaded_csv_inputs[index]);
+        }
     };
 
     handle_csv_upload = async (event: FormEvent<HTMLInputElement>) => {
@@ -946,6 +994,7 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_deuterium_delta_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        this.clear_results();
         let value = (typeof event === "string") ? event : (event.target as HTMLInputElement).value;
         let values_sep_by_spaces = value.split(" ");
         values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
@@ -967,6 +1016,7 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_oxygen_delta_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        this.clear_results();
         let value = (typeof event === "string") ? event : (event.target as HTMLInputElement).value;
         let values_sep_by_spaces = value.split(" ");
         values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
@@ -1018,6 +1068,7 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_date_change = (index: number, value: string | moment.Moment) => {
+        this.clear_results();
         let new_date_array = this.state.datetimes;
         if (typeof value != "string") {
             let all_dates_filled = true;
@@ -1084,6 +1135,7 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_dose_weight_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        this.clear_results();
         if (this.state.mixed_dose && index == 0) {
             // if mixed, set both values to this
             this.handle_dose_weight_change(1, event);
@@ -1108,6 +1160,7 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_dose_enrichment_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        this.clear_results();
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
         let values_sep_by_spaces = value.split(" ");
         values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
@@ -1128,6 +1181,7 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_subject_weight_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        this.clear_results();
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
         let values_sep_by_spaces = value.split(" ");
         values_sep_by_spaces = values_sep_by_spaces.filter((value: string) => value !== "");
@@ -1148,6 +1202,7 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_subject_id_change = (event: FormEvent<HTMLElement> | string) => {
+        this.clear_results();
         if (this.state.results.results) {
             this.setState({clear_popup_open: true});
         }
@@ -1158,16 +1213,19 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     handle_dilution_space_ratio_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        this.clear_results();
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
         this.setState({dilution_space_ratio: value});
     };
 
     handle_rq_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        this.clear_results();
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
         this.setState({rq: value});
     };
 
     add_sample_rows = (rows_to_add: number) => {
+        this.clear_results();
         let deuterium_deltas = this.state.deuterium_deltas;
         let oxygen_deltas = this.state.oxygen_deltas;
         let datetimes = this.state.datetimes;
@@ -1187,6 +1245,7 @@ export class DLWApp extends React.Component<any, DLWState> {
     };
 
     reset_sample_rows = () => {
+        this.clear_results();
         this.setState({
                           deuterium_deltas: new Array(NUM_DELTAS).fill(""),
                           oxygen_deltas: new Array(NUM_DELTAS).fill(""),

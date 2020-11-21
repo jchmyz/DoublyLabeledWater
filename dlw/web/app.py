@@ -111,6 +111,7 @@ def load_csv():
         results.append(row)
     return json.dumps({'results': results, 'error': False})
 
+
 @app.route('/')
 def root():
     return send_from_directory(STATICS_LOCATION, 'index.html')
