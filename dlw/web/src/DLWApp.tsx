@@ -96,6 +96,7 @@ interface DLWState {
     results: Results
     new_csv_name: string
     new_csv_url: string
+    current_output: string|null
 }
 
 const AppToaster = Toaster.create({className: "app-toaster", position: Position.TOP_RIGHT});
@@ -126,7 +127,7 @@ export class DLWApp extends React.Component<any, DLWState> {
 
             minimum_dates: false, minimum_deuterium_deltas: false, minimum_oxygen_deltas: false,
 
-            results: {results: null}, new_csv_name: "", new_csv_url: ""
+            results: {results: null}, new_csv_name: "", new_csv_url: "", current_output: null
         };
     }
 
@@ -155,9 +156,7 @@ export class DLWApp extends React.Component<any, DLWState> {
         if (this.state.loaded_csv_inputs.length > 1) {
             load_next_csv_row_button = <Button className='load-new-csv-row-button' onClick={this.load_next_csv_row}
                                                disabled={this.state.loaded_csv_index == this.state.loaded_csv_inputs.length - 1}>LOAD
-                NEXT ROW</Button>;
-        }
-        if (this.state.loaded_csv_inputs.length > 1) {
+                                               NEXT ROW</Button>;
             load_prev_csv_row_button = <Button className='load-new-csv-row-button' onClick={this.load_previous_csv_row}
                                                disabled={this.state.loaded_csv_index == 0}>LOAD PREVIOUS ROW</Button>;
         }
@@ -267,8 +266,8 @@ export class DLWApp extends React.Component<any, DLWState> {
             }
             export_button = (
                 <a href={this.state.new_csv_url} download={csv_name} className='export-button'>
-                    <Button className='within-link' intent={Intent.SUCCESS} disabled={!(this.state.new_csv_name)}>
-                        EXPORT RESULTS TO CSV</Button>
+                    <Button onClick={() => this.setState({current_output: null})} className='within-link'
+                        intent={Intent.SUCCESS} disabled={!(this.state.new_csv_name)}>EXPORT RESULTS TO CSV</Button>
                 </a>);
             let results_calculations: JSX.Element[] = [];
             let results_error_flags: JSX.Element[] = [];
@@ -577,22 +576,38 @@ export class DLWApp extends React.Component<any, DLWState> {
                                             placeholder='ID' value={this.state.subject_id}/>
                             </Popover>
                         </div>
-                        <div>
-                            <Button className='clear-button' onClick={this.clear}>CLEAR INPUTS</Button>
+                        <div className='clear-buttons'>
+                            <div>
+                                <Button className='clear-button' onClick={this.clear}>CLEAR INPUTS</Button>
+                            </div>
+                            <div>
+                                <Button disabled={this.state.current_output === null} title={this.state.current_output === null ? 'No output loaded' : ''}
+                                className={'clear-button'} onClick={() =>this.setState({current_output: null})}>CLEAR OUTPUTS</Button>
+                            </div>
                         </div>
                     </div>
-                    <div className='load-from-csv'>
-                        <div>
-                            <h5>Load input data from .csv file</h5>
-                            <FileInput text={this.state.input_csv_name || "Choose file..."}
-                                       inputProps={{
-                                           'accept': '.csv',
-                                           'id': 'file-input'
-                                       }} onInputChange={this.handle_csv_upload}/>
+                    <div className="load-files">
+                        <div className='load-from-csv'>
+                            <div>
+                                <h5>Load input data from .csv file</h5>
+                                <FileInput text={this.state.input_csv_name || "Choose input file..."}
+                                        inputProps={{
+                                            'accept': '.csv',
+                                            'id': 'file-input'
+                                        }} onInputChange={this.handle_csv_upload}/>
+                            </div>
+                            <div className='load-next-csv-button-div'>
+                                {load_next_csv_row_button}
+                                {load_prev_csv_row_button}
+                            </div>
                         </div>
-                        <div className='load-next-csv-button-div'>
-                            {load_next_csv_row_button}
-                            {load_prev_csv_row_button}
+                        <div className='load-output-from-csv'>
+                            <h5>Load existing output data from .csv file (Optional)</h5>
+                            <FileInput text={"Choose output file..."}
+                                        inputProps={{
+                                            'accept': '.csv',
+                                            'id': 'file-output'
+                                        }} onInputChange={this.handle_csv_output}/>
                         </div>
                     </div>
                     <div className='exponential-checkbox'>
@@ -715,15 +730,27 @@ export class DLWApp extends React.Component<any, DLWState> {
     }
 
     export = async () => {
-        let results_blob = await export_to_csv(this.state.new_csv_name);
-        if (results_blob == null) {
+        let results_str = await export_to_csv(this.state.new_csv_name);
+        if (results_str == null) {
             AppToaster.show({
                                 message: "Error exporting results to csv. Please file a bug report at https://github.com/jchmyz/DoublyLabeledWater/issues",
                                 intent: "danger",
                                 timeout: 0
                             });
         } else {
-            this.setState({new_csv_url: URL.createObjectURL(results_blob)});
+            let {current_output} = this.state;
+            if (current_output) {
+                // remove the header since there is existing output
+                results_str = '\n' + results_str.split(/\r?\n/)[1];
+            } else {
+                current_output = '';
+            }
+            current_output = current_output + results_str;
+            let results_blob = new Blob([current_output]);
+            this.setState({
+                new_csv_url: URL.createObjectURL(results_blob),
+                current_output
+            });
         }
     };
 
@@ -872,6 +899,39 @@ export class DLWApp extends React.Component<any, DLWState> {
                 this.setState({input_csv_name: file.name, loaded_csv_inputs: inputs.results, loaded_csv_index: 0});
                 await this._handle_csv_input(inputs.results[0]);
             }
+        } else {
+            AppToaster.show({
+                                message: "Select a .csv file. For formatting help, press 'Help' in the upper right hand corner",
+                                intent: "danger",
+                                timeout: 0
+                            });
+        }
+    };
+
+    handle_csv_output = async (event: FormEvent<HTMLInputElement>) => {
+        const input = event.target as any;
+        const [file] = input.files;
+        if ((file.type === "text/csv" || file.type === "application/vnd.ms-excel") || (file.type === "" && file.name.endsWith(".csv"))) {
+            let reader = new FileReader();
+            reader.onload = (e) => {
+                this.setState({
+                    current_output: reader.result as string
+                });
+                AppToaster.show({
+                    message: "Successfully loaded output CSV file.",
+                    intent: "success",
+                    timeout: 3000
+                });
+                input.value = "";
+            };
+            reader.onerror = (e) => {
+                AppToaster.show({
+                    message: "Error reading output CSV file. For formatting help, press 'Help' in the upper right hand corner",
+                    intent: "danger",
+                    timeout: 0
+                });
+            };
+            reader.readAsText(file);
         } else {
             AppToaster.show({
                                 message: "Select a .csv file. For formatting help, press 'Help' in the upper right hand corner",
