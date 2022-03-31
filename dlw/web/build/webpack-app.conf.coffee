@@ -2,4 +2,4 @@ module.exports =
   output:
     filename: 'app.js'
   target: 'web'
-  devtool: 'source-map'
+  devtool: 'inline-source-map'
