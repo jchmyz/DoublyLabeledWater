@@ -114,7 +114,6 @@ def load_csv():
 
 @app.route('/')
 def root():
-    print('yes')
     return send_from_directory(STATICS_LOCATION, 'index.html')
 
 
@@ -122,11 +121,7 @@ def root():
 @click.option('--host', default=None)
 @click.option('--port', default=None)
 def run_app(host, port):
-    print('running')
-    try:
-        app.run(debug=True, host='0.0.0.0')
-    except Exception as err:
-        print(err)
+    app.run(debug=False, host=host, port=port)
 
 
 if __name__ == '__main__':
