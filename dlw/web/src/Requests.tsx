@@ -23,7 +23,7 @@ export async function calculate_from_inputs(inputs: CalculationInputs): Promise<
     return response.json();
 }
 
-export async function export_to_csv(filename: string): Promise<Blob|null> {
+export async function export_to_csv(filename: string): Promise<string|null> {
     let fetch_args = {
         method: 'POST',
         headers: {
@@ -34,7 +34,7 @@ export async function export_to_csv(filename: string): Promise<Blob|null> {
     };
     let response = await fetch('/export', fetch_args);
     if (response.ok) {
-        return response.blob();
+        return response.text();
     } else {
         return null;
     }
