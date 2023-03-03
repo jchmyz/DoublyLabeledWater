@@ -33,7 +33,7 @@
     "gulp-coffee": "^2.3.2",
     "gulp-compile-handlebars": "^0.6.1",
     "gulp-debug": "^2.1.2",
-    "gulp-handlebars": "^4.0.0",
+    "gulp-handlebars": "^5.0.2",
     "gulp-newer": "^1.1.0",
     "gulp-rename": "^1.2.2",
     "gulp-sass": "^3.0.0",
