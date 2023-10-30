@@ -16,7 +16,8 @@ export interface CalculationInputs {
     mixed_dose: boolean,
     in_permil: boolean,
     pop_avg_rdil: string|null,
-    exponential: boolean
+    exponential: boolean,
+    fat_free_mass_factor: string,
 }
 
 export interface LoadedCSVInputs {
@@ -35,4 +36,5 @@ export interface LoadedCSVInputs {
     pop_dilution_space_ratio: string,
     delta_units: DeltaUnits // permil or ppm
     exponential_fit?: string
+    fat_free_mass_factor?: string,
 }

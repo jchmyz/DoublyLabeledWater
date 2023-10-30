@@ -21,6 +21,7 @@ const NUM_SAMPLE_TIMES = 6;
 const NUM_DELTAS = 5;
 const DEFAULT_EXPONENTIAL_SAMPLES = 11;
 const DEFAULT_RQ = '0.85';
+const DEFAULT_FAT_FREE_MASS_FACTOR = '0.73';
 const NEW_ROWS = 4;
 export const DATE_LABELS = ['Background', 'Dose', 'PDA', 'PDB', 'EDA', 'EDB'];
 export const SAMPLE_LABELS = [DATE_LABELS[0]].concat(DATE_LABELS.slice(2, 6));
@@ -78,7 +79,8 @@ interface DLWState {
     dose_enrichments: string[],
     rq: string,
     subject_weights: string[],
-    dilution_space_ratio: string
+    dilution_space_ratio: string;
+    fat_free_mass_factor: string;
     subject_id: string;
     mixed_dose: boolean;
     excluded_samples: boolean[];
@@ -120,6 +122,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             dose_weights: ["", ""], dose_enrichments: ["", ""], rq: DEFAULT_RQ,
             mixed_dose: false,
             subject_weights: ["", ""], dilution_space_ratio: "", subject_id: "",
+            fat_free_mass_factor: DEFAULT_FAT_FREE_MASS_FACTOR,
             excluded_samples: new Array(NUM_DELTAS).fill(false),
 
             deuterium_deltas_validated: false, oxygen_deltas_validated: false, datetimes_validated: false,
@@ -535,6 +538,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <p className='help-paragraph'>Population Dilution Space Ratio: If left blank, the population
                         dilution
                         space ratio value used is 1.036, as suggested in Speakman (2020).</p>
+                    <p className='help-paragraph'>Fat Free Mass Factor: If left blank, the Fat Free Mass Factor value
+                        used is 0.73.</p>
                     <p className='help-paragraph'>Help us improve the DLW program: please report any issues or
                         feature requests at <a href="https://github.com/jchmyz/DoublyLabeledWater/issues">our open
                             source
@@ -689,6 +694,13 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <NumberInput placeholder={"Dilution space ratio"} value={this.state.dilution_space_ratio}
                                          change_function={this.handle_dilution_space_ratio_change} unit={''} index={0}/>
                         </div>
+                        <div className='inputs-by-element'>
+                            <h5>Fat Free Mass Factor</h5>
+                            <NumberInput placeholder={"Fat Free Mass Factor"} value={this.state.fat_free_mass_factor}
+                                         change_function={this.handle_fat_free_mass_factor_change} unit={''} index={0}/>
+                        </div>
+                    </div>
+                    <div className='element-wise-inputs'>
                         <Popover isOpen={this.state.missing_data_popup_open} position={Position.TOP}
                                  className='full-popover-missing-data' key={'missing-data-popover'}>
                             <Button className='calculate-button' onClick={() => {
@@ -790,7 +802,8 @@ export class DLWApp extends React.Component<any, DLWState> {
                 in_permil: (this.state.delta_units === DeltaUnits.permil),
                 pop_avg_rdil: this.state.dilution_space_ratio ? this.state.dilution_space_ratio : null,
                 exponential: this.state.exponential,
-                rq: this.state.rq
+                rq: this.state.rq,
+                fat_free_mass_factor: this.state.fat_free_mass_factor,
             }
         );
         if (calculated_results.results) {
@@ -830,6 +843,7 @@ export class DLWApp extends React.Component<any, DLWState> {
                           dose_enrichments: ["", ""],
                           subject_weights: ["", ""],
                           dilution_space_ratio: "",
+                          fat_free_mass_factor: DEFAULT_FAT_FREE_MASS_FACTOR,
                           subject_id: "",
 
                           deuterium_deltas_validated: false,
@@ -990,6 +1004,9 @@ export class DLWApp extends React.Component<any, DLWState> {
             }
             if (input.exponential_fit) {
                 this.setState({exponential: JSON.parse(input.exponential_fit)});
+            }
+            if (input.fat_free_mass_factor) {
+                this.handle_fat_free_mass_factor_change(0, input.fat_free_mass_factor);
             }
         } catch (e) {
             console.log(e);
@@ -1282,6 +1299,12 @@ export class DLWApp extends React.Component<any, DLWState> {
         this.clear_results();
         let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
         this.setState({rq: value});
+    };
+
+    handle_fat_free_mass_factor_change = (index: number, event: FormEvent<HTMLElement> | string) => {
+        this.clear_results();
+        let value = (typeof event == "string") ? event : (event.target as HTMLInputElement).value;
+        this.setState({fat_free_mass_factor: value});
     };
 
     add_sample_rows = (rows_to_add: number) => {

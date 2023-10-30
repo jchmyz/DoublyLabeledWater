@@ -35,7 +35,9 @@ def calculate_from_inputs():
                                     in_permil=input_data['in_permil'],
                                     expo_calc=input_data['exponential'],
                                     pop_avg_rdil=float(input_data['pop_avg_rdil']) if input_data[
-                                        'pop_avg_rdil'] else None)
+                                        'pop_avg_rdil'] else None,
+                                    fat_free_mass_factor=float(input_data['fat_free_mass_factor'])
+                                     if input_data['fat_free_mass_factor'] else None)
 
     def sort_calculated_results(results):
         return {
