@@ -14,7 +14,7 @@ POP_DIL_SPACE_D = 1.041
 POP_DIL_SPACE_O = 1.007
 STD_POP_AVG_RDIL = 1.036  # Taken from Speakman et al 2020
 WEIGHT_CUTOFF = 10        # From Speakman et al 2020: weight at which one switches from infant to adult equation
-FAT_FREE_MASS_FACTOR = 0.73
+DEFAULT_FAT_FREE_MASS_FACTOR = 0.73
 HOURS_PER_DAY = 24
 LITERS_PER_MOL = 22.414
 LITERS_PER_MOL_SPEAKMAN = 22.26     # Taken from Speakman et al 2020.
@@ -174,7 +174,8 @@ class DLWSubject:
     """
 
     def __init__(self, d_meas, o18_meas, sample_datetimes, dose_weights, mixed_dose, dose_enrichments,
-                 subject_weights, subject_id, in_permil=True, pop_avg_rdil=None, expo_calc=False, rq = STANDARD_RQ):
+                 subject_weights, subject_id, in_permil=True, pop_avg_rdil=None, expo_calc=False, rq = STANDARD_RQ,
+                 fat_free_mass_factor = DEFAULT_FAT_FREE_MASS_FACTOR):
         """Constructor for the DLWSubject class
            :param d_meas (np.array): deuterium delta values of subject samples
            :param o18_meas (np.array): oxygen 18 delta values of subject samples
@@ -188,6 +189,7 @@ class DLWSubject:
            :param pop_avg_rdil ([float]): population average dilution space to use in the calculations
            :param expo_calc ([bool]): True if exponential calculations are requested
            :param rq ([float]): respiratory quotient of subject
+           :param fat_free_mass_factor ([float]): fat free mass factor of the subject
         """
         if len(d_meas) == len(o18_meas) == len(sample_datetimes) - 1:
 
@@ -198,6 +200,7 @@ class DLWSubject:
             self.subject_weights = subject_weights
             self.subject_id = subject_id
             self.rq = rq
+            self.fat_free_mass_factor = fat_free_mass_factor
 
             if pop_avg_rdil is None:
                 self.pop_avg_rdil = STD_POP_AVG_RDIL
@@ -249,7 +252,7 @@ class DLWSubject:
             self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2
             # average total body water
 
-            self.fat_free_mass_kg = self.total_body_water_ave_kg / FAT_FREE_MASS_FACTOR
+            self.fat_free_mass_kg = self.total_body_water_ave_kg / self.fat_free_mass_factor
             self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg
             self.body_fat_percent = self.fat_mass_kg / self.subject_weights[0] * 100
 
