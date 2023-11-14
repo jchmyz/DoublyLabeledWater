@@ -37,7 +37,7 @@ def calculate_from_inputs():
                                     pop_avg_rdil=float(input_data['pop_avg_rdil']) if input_data[
                                         'pop_avg_rdil'] else None,
                                     fat_free_mass_factor=float(input_data['fat_free_mass_factor'])
-                                     if input_data['fat_free_mass_factor'] else None)
+                                        if 'fat_free_mass_factor' in input_data and input_data['fat_free_mass_factor'] != "" else None)
 
     def sort_calculated_results(results):
         return {

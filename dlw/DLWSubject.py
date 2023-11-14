@@ -175,7 +175,7 @@ class DLWSubject:
 
     def __init__(self, d_meas, o18_meas, sample_datetimes, dose_weights, mixed_dose, dose_enrichments,
                  subject_weights, subject_id, in_permil=True, pop_avg_rdil=None, expo_calc=False, rq = STANDARD_RQ,
-                 fat_free_mass_factor = DEFAULT_FAT_FREE_MASS_FACTOR):
+                 fat_free_mass_factor = None):
         """Constructor for the DLWSubject class
            :param d_meas (np.array): deuterium delta values of subject samples
            :param o18_meas (np.array): oxygen 18 delta values of subject samples
@@ -191,6 +191,7 @@ class DLWSubject:
            :param rq ([float]): respiratory quotient of subject
            :param fat_free_mass_factor ([float]): fat free mass factor of the subject
         """
+        fat_free_mass_factor = DEFAULT_FAT_FREE_MASS_FACTOR if fat_free_mass_factor is None else fat_free_mass_factor
         if len(d_meas) == len(o18_meas) == len(sample_datetimes) - 1:
 
             self.sample_datetimes = sample_datetimes
