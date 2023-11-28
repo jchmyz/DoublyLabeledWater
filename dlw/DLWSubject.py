@@ -239,23 +239,24 @@ class DLWSubject:
             self.nd = self.calculate_various_nd()
             self.no = self.calculate_various_no()
 
-            if not (np.isnan(self.nd['plat_a_mol'])):
-                self.dil_space_ratio = self.nd['plat_a_mol'] / self.no['plat_a_mol']  # dilution space ratio err flag
-            elif not (np.isnan(self.nd['plat_b_mol'])):
-                self.dil_space_ratio = self.nd['plat_b_mol'] / self.no['plat_b_mol']
-            else:
-                raise ValueError('No numerical dilution space values')
+            self.dil_space_ratio = self.calculate_dil_space_ratio(expo_calc)
 
             # self.rh2o = (self.nd['adj_plat_avg_kg'] * self.kd_per_hr * HOURS_PER_DAY) / STANDARD_WATER_MOL_MASS
+            
+            self.total_body_water_d_kg_int = self.nd['adj_int_avg_kg'] / POP_DIL_SPACE_D
+            self.total_body_water_o_kg_int = self.no['adj_int_avg_kg'] / POP_DIL_SPACE_O
+            self.total_body_water_ave_kg_int = (self.total_body_water_d_kg_int + self.total_body_water_o_kg_int) / 2
 
-            self.total_body_water_d_kg = self.nd['adj_plat_avg_kg'] / POP_DIL_SPACE_D
-            self.total_body_water_o_kg = self.no['adj_plat_avg_kg'] / POP_DIL_SPACE_O
-            self.total_body_water_ave_kg = (self.total_body_water_d_kg + self.total_body_water_o_kg) / 2
-            # average total body water
+            self.total_body_water_d_kg_plat = self.nd['adj_plat_avg_kg'] / POP_DIL_SPACE_D
+            self.total_body_water_o_kg_plat = self.no['adj_plat_avg_kg'] / POP_DIL_SPACE_O
+            self.total_body_water_ave_kg_plat = (self.total_body_water_d_kg_plat + self.total_body_water_o_kg_plat) / 2
 
-            self.fat_free_mass_kg = self.total_body_water_ave_kg / self.fat_free_mass_factor
-            self.fat_mass_kg = self.subject_weights[0] - self.fat_free_mass_kg
-            self.body_fat_percent = self.fat_mass_kg / self.subject_weights[0] * 100
+            self.fat_free_mass_kg_int = self.total_body_water_ave_kg_int / self.fat_free_mass_factor
+            self.fat_free_mass_kg_plat = self.total_body_water_ave_kg_plat / self.fat_free_mass_factor
+            self.fat_mass_kg_int = self.subject_weights[0] - self.fat_free_mass_kg_int
+            self.fat_mass_kg_plat = self.subject_weights[0] - self.fat_free_mass_kg_plat
+            self.body_fat_percent_int = self.fat_mass_kg_int / self.subject_weights[0] * 100
+            self.body_fat_percent_plat = self.fat_mass_kg_plat / self.subject_weights[0] * 100
 
             self.schoeller = self.calculate_schoeller()
             self.racette = self.calculate_racette()
@@ -386,6 +387,20 @@ class DLWSubject:
 
         return mol_masses
 
+    def calculate_dil_space_ratio(self, expo_calc):
+        if expo_calc:
+            if not (np.isnan(self.nd['int_a_mol'])):
+                return self.nd['int_a_mol'] / self.no['int_a_mol']  # dilution space ratio err flag
+            elif not (np.isnan(self.nd['int_b_mol'])):
+                return self.nd['int_b_mol'] / self.no['int_b_mol']
+        else:
+            if not (np.isnan(self.nd['plat_a_mol'])):
+                return self.nd['plat_a_mol'] / self.no['plat_a_mol']  # dilution space ratio err flag
+            elif not (np.isnan(self.nd['plat_b_mol'])):
+                return self.nd['plat_b_mol'] / self.no['plat_b_mol']
+
+        raise ValueError('No numerical dilution space values')
+    
     def calculate_various_nd(self):
         """Calculate the various dilution spaces for nd.
             :return: dict of dilution spaces for deuterium
@@ -747,13 +762,15 @@ class DLWSubject:
         """ Save the results to a csv file
             :param: filename(string), the name of the file to which to save
         """
-        write_header = ('subject_id,kd_hr,ko_hr,Nd_plat_avg_mol,No_plat_avg_mol, TBW_avg_kg,FFM_kg,FM_kg,body_fat_%,'
+        write_header = ('subject_id,kd_hr,ko_hr,Nd_plat_avg_mol,No_plat_avg_mol,'
+                        'TBW_avg_kg_int,FFM_kg_int,FM_kg_int,body_fat_%_int,TBW_avg_kg_plat,FFM_kg_plat,FM_kg_plat,body_fat_%_plat,'
                         'spk_rCO2_int_mol/day,spk_rCO2_int_L/day,spk_EE_int_kcal/day,spk_EE_int_MJ/day,'
                         'spk_rCO2_plat_mol/day,spk_rCO2_plat_L/day,spk_EE_plat_kcal/day,spk_EE_plat_MJ/day,'
                         '2H_plateau_%,18O_plateau_%,DS_ratio,EE_consistency_check,ko/kd')
         write_data = np.asarray(
             [[self.subject_id, self.kd_per_hr, self.ko_per_hr, self.nd['adj_plat_avg_mol'], self.no['adj_plat_avg_mol'],
-              self.total_body_water_ave_kg, self.fat_free_mass_kg, self.fat_mass_kg, self.body_fat_percent,
+              self.total_body_water_ave_kg_int, self.fat_free_mass_kg_int, self.fat_mass_kg_int, self.body_fat_percent_int,
+              self.total_body_water_ave_kg_plat, self.fat_free_mass_kg_plat, self.fat_mass_kg_plat, self.body_fat_percent_plat,
               self.speakman2020['co2_int_mol_day'], self.speakman2020['co2_int_L_day'], self.speakman2020['tee_int_kcal_day'],
               self.speakman2020['tee_int_mj_day'], self.speakman2020['co2_plat_mol_day'], self.speakman2020['co2_plat_L_day'],
               self.speakman2020['tee_plat_kcal_day'], self.speakman2020['tee_plat_mj_day'], self.d_ratio_percent,
