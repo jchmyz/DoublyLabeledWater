@@ -71,7 +71,6 @@ def calculate_from_inputs():
             }
         }
 
-    # TODO dont need these in expo
     if np.isnan(CALCULATED_RESULTS.d_ratio_percent):
         plateau_2h = ["2H plateau (<5%)", "N/A (missing data)"]
     else:
