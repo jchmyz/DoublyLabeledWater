@@ -35,6 +35,13 @@ interface RCO2_RESULTS {
     ee_mj_day: string[]
 }
 
+interface BODY_COMP_RESULTS {
+    body_water_avg_kg: string[],
+    fat_free_mass_kg: string[],
+    fat_mass_kg: string[],
+    body_fat_percentage: string[]
+}
+
 export interface Results {
     results: {
         calculations: {
@@ -42,10 +49,10 @@ export interface Results {
             kd_hr: string[],
             nop_kg: string[],
             ko_hr: string[],
-            body_water_avg_kg: string[],
-            fat_free_mass_kg: string[],
-            fat_mass_kg: string[],
-            body_fat_percentage: string[]
+            body_comp: {
+                plat: BODY_COMP_RESULTS,
+                int: BODY_COMP_RESULTS
+            }
         }
         speakman2020: {
             rco2_ee_int: RCO2_RESULTS, rco2_ee_plat: RCO2_RESULTS
@@ -278,6 +285,9 @@ export class DLWApp extends React.Component<any, DLWState> {
             let results_speakman_int: JSX.Element[] = [];
             let results_speakman_plat: JSX.Element[] = [];
 
+            let results_body_comp_int: JSX.Element[] = [];
+            let results_body_comp_plat: JSX.Element[] = [];
+
             results_calculations.push(
                 <div className='result-pair'>
                     <p className="result-label">{this.state.results.results.calculations.ndp_kg[0] + ":"}</p>
@@ -298,26 +308,33 @@ export class DLWApp extends React.Component<any, DLWState> {
                     <p className="result-label">{this.state.results.results.calculations.ko_hr[0] + ":"}</p>
                     <p className="result-value">{this.state.results.results.calculations.ko_hr[1]}</p>
                 </div>);
-            results_calculations.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.results.calculations.body_water_avg_kg[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.results.calculations.body_water_avg_kg[1] + " kg"}</p>
-                </div>);
-            results_calculations.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.results.calculations.fat_free_mass_kg[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.results.calculations.fat_free_mass_kg[1] + " kg"}</p>
-                </div>);
-            results_calculations.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.results.calculations.fat_mass_kg[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.results.calculations.fat_mass_kg[1] + " kg"}</p>
-                </div>);
-            results_calculations.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.results.calculations.body_fat_percentage[0] + ":"}</p>
-                    <p className="result-value">{this.state.results.results.calculations.body_fat_percentage[1] + "%"}</p>
-                </div>);
+            
+            //@ts-ignore
+            function push_body_comp_results(element: JSX.Element[], result_set: BODY_COMP_RESULTS) {
+                element.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result_set.body_water_avg_kg[0] + ":"}</p>
+                        <p className="result-value">{result_set.body_water_avg_kg[1] + " kg"}</p>
+                    </div>);
+                element.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result_set.fat_free_mass_kg[0] + ":"}</p>
+                        <p className="result-value">{result_set.fat_free_mass_kg[1] + " kg"}</p>
+                    </div>);
+                element.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result_set.fat_mass_kg[0] + ":"}</p>
+                        <p className="result-value">{result_set.fat_mass_kg[1] + " kg"}</p>
+                    </div>);
+                element.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{result_set.body_fat_percentage[0] + ":"}</p>
+                        <p className="result-value">{result_set.body_fat_percentage[1] + "%"}</p>
+                    </div>);
+            }
+
+            push_body_comp_results(results_body_comp_int, this.state.results.results.calculations.body_comp.int);
+            push_body_comp_results(results_body_comp_plat, this.state.results.results.calculations.body_comp.plat);
 
             //@ts-ignore
             function push_calculated_results(element: JSX.Element[], result_set: RCO2_RESULTS) {
@@ -348,20 +365,23 @@ export class DLWApp extends React.Component<any, DLWState> {
 
             let error_okay = "error-okay";
             let outside_error_bars = "error-not-okay";
-            let error_class = ((parseFloat(this.state.results.results.error_flags.plateau_2h[1]) < 5 &&
-                parseFloat(this.state.results.results.error_flags.plateau_2h[1]) > -5) ? error_okay : outside_error_bars);
-            results_error_flags.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.results.error_flags.plateau_2h[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_2h[1]}</p>
-                </div>);
-            error_class = ((parseFloat(this.state.results.results.error_flags.plateau_18O[1]) < 5 &&
-                parseFloat(this.state.results.results.error_flags.plateau_18O[1]) > -5) ? error_okay : outside_error_bars);
-            results_error_flags.push(
-                <div className='result-pair'>
-                    <p className="result-label">{this.state.results.results.error_flags.plateau_18O[0] + ":"}</p>
-                    <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_18O[1]}</p>
-                </div>);
+            let error_class = "";
+            if (!this.state.exponential) {
+                error_class = ((parseFloat(this.state.results.results.error_flags.plateau_2h[1]) < 5 &&
+                    parseFloat(this.state.results.results.error_flags.plateau_2h[1]) > -5) ? error_okay : outside_error_bars);
+                results_error_flags.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{this.state.results.results.error_flags.plateau_2h[0] + ":"}</p>
+                        <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_2h[1]}</p>
+                    </div>);
+                error_class = ((parseFloat(this.state.results.results.error_flags.plateau_18O[1]) < 5 &&
+                    parseFloat(this.state.results.results.error_flags.plateau_18O[1]) > -5) ? error_okay : outside_error_bars);
+                results_error_flags.push(
+                    <div className='result-pair'>
+                        <p className="result-label">{this.state.results.results.error_flags.plateau_18O[0] + ":"}</p>
+                        <p className={"result-value " + error_class}>{this.state.results.results.error_flags.plateau_18O[1]}</p>
+                    </div>);
+            }
             error_class = ((parseFloat(this.state.results.results.error_flags.ds_ratio[1]) < 1.070 &&
                 parseFloat(this.state.results.results.error_flags.ds_ratio[1]) > 1) ? error_okay : outside_error_bars);
             results_error_flags.push(
@@ -412,7 +432,7 @@ export class DLWApp extends React.Component<any, DLWState> {
             } else {
                 // first, middle and last dates, approx
                 for (let i = 0; i < this.state.num_sample_times; i++) {
-                    if (!this.state.excluded_samples[i]) {
+                    if (i === 0 || !this.state.excluded_samples[i - 1]) {
                         chart_data_dates.push(this.state.datetimes[i]);
                     }
                 }
@@ -467,6 +487,20 @@ export class DLWApp extends React.Component<any, DLWState> {
                             <div className='result-section error-flags'>
                                 <h5 className='result-header-error'>Error Flags</h5>
                                 {results_error_flags}
+                            </div>
+                        </div>
+                    </Card>
+                    <Card className='results-card'>
+                        <div className='result-sections calculation-types'>
+                            <div className='s2020'>
+                                <div className='calc-result'>
+                                    <h5 className='result-header-calc'>Body Comp, intercept method</h5>
+                                    {results_body_comp_int}
+                                </div>
+                                <div className='calc-result'>
+                                    <h5 className='result-header-calc'>Body Comp, plateau method</h5>
+                                    {results_body_comp_plat}
+                                </div>
                             </div>
                         </div>
                     </Card>

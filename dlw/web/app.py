@@ -37,7 +37,7 @@ def calculate_from_inputs():
                                     pop_avg_rdil=float(input_data['pop_avg_rdil']) if input_data[
                                         'pop_avg_rdil'] else None,
                                     fat_free_mass_factor=float(input_data['fat_free_mass_factor'])
-                                     if input_data['fat_free_mass_factor'] else None)
+                                        if 'fat_free_mass_factor' in input_data and input_data['fat_free_mass_factor'] != "" else None)
 
     def sort_calculated_results(results):
         return {
@@ -52,6 +52,22 @@ def calculate_from_inputs():
                 "rco2_l_hr": ["rCO2 (L/day)", round(results['co2_plat_L_day'], 1)],
                 "ee_kcal_day": ["EE (kcal/day)", round(results['tee_plat_kcal_day'], 1)],
                 "ee_mj_day": ["EE (MJ/day)", round(results['tee_plat_mj_day'], 2)]
+            }
+        }
+
+    def sort_body_comp_results(results: DLWSubject):
+        return {
+            "plat": {
+                "body_water_avg_kg": ["Total Body Water Average (kg)", round(results.total_body_water_ave_kg_plat, 1)],
+                "fat_free_mass_kg": ["Fat Free Mass (kg)", round(results.fat_free_mass_kg_plat, 1)],
+                "fat_mass_kg": ["Fat Mass (kg)", round(results.fat_mass_kg_plat, 1)],
+                "body_fat_percentage": ["Body Fat Percentage", round(results.body_fat_percent_plat, 1)]
+            },
+            "int": {
+                "body_water_avg_kg": ["Total Body Water Average (kg)", round(results.total_body_water_ave_kg_int, 1)],
+                "fat_free_mass_kg": ["Fat Free Mass (kg)", round(results.fat_free_mass_kg_int, 1)],
+                "fat_mass_kg": ["Fat Mass (kg)", round(results.fat_mass_kg_int, 1)],
+                "body_fat_percentage": ["Body Fat Percentage", round(results.body_fat_percent_int, 1)]
             }
         }
 
@@ -77,11 +93,7 @@ def calculate_from_inputs():
                 "kd_hr": ["kd/hour", round(CALCULATED_RESULTS.kd_per_hr, 6)],
                 "nop_kg": ["NoP (kg)", round(CALCULATED_RESULTS.no['adj_plat_avg_kg'], 1)],
                 "ko_hr": ["ko/hour", round(CALCULATED_RESULTS.ko_per_hr, 6)],
-                "body_water_avg_kg": ["Total Body Water Average (kg)",
-                                      round(CALCULATED_RESULTS.total_body_water_ave_kg, 1)],
-                "fat_free_mass_kg": ["Fat Free Mass (kg)", round(CALCULATED_RESULTS.fat_free_mass_kg, 1)],
-                "fat_mass_kg": ["Fat Mass (kg)", round(CALCULATED_RESULTS.fat_mass_kg, 1)],
-                "body_fat_percentage": ["Body Fat Percentage", round(CALCULATED_RESULTS.body_fat_percent, 1)]
+                "body_comp": sort_body_comp_results(CALCULATED_RESULTS)
             },
             "error_flags": {
                 "plateau_2h": plateau_2h,
